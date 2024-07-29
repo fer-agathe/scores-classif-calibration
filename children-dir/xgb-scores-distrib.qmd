@@ -1,0 +1,14 @@
+#### `r tb_labs |> dplyr::slice(i) |> pull(no_noise)`
+
+```{r}
+#| echo: false
+#| warning: false
+#| fig-cap: !expr glue::glue("Distribution of scores on the test set for Scenario {i}.")
+#| fig-height: 10
+#| fig-width: 12
+scenario_number <- tb_labs |> dplyr::slice(i) |> pull(scenario)
+par(mfrow = c(2*3,4))
+plot_bp_xgb(scenario = scenario_number, repn = repn, max_depth = 2)
+plot_bp_xgb(scenario = scenario_number, repn = repn, max_depth = 4)
+plot_bp_xgb(scenario = scenario_number, repn = repn, max_depth = 6)
+```

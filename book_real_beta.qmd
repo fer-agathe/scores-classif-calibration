@@ -1,0 +1,1199 @@
+# Datasets and Priors {#sec-priors-beta}
+
+
+:::{.callout-note}
+
+This chapter provides priors for the distribution of the true probability of binary events from the real-world dataset used in the paper. It uses the functions defined in [Chapter -@sec-real-example]. We assume that the true probabilities are distributed according to a Beta distribution. The parameters of that distribution are obtained by fitting a Beta distribution by maximimum likelihood on the scores estimated using three models: a Generalized Linear Model (GLM), a Generalized Additive Model (GAM), and a Generalized Additive Model with model selection (GAMSEL).
+
+:::
+
+
+
+```{r load-libraries}
+library(tidyverse)
+library(gam)
+library(gamsel)
+
+# Colours for train/test
+colour_samples <- c(
+  "Train" = "#0072B2",
+  "Test" = "#D55E00"
+)
+```
+
+
+Let us load the functions defined in [Chapter -@sec-real-example]:
+```{r}
+source("functions/real-data.R")
+```
+
+We will store the results obtained from the estimations in the `output/real-data/` folder.
+```{r}
+if (!dir.exists("output/real-data/")) dir.create("output/real-data/")
+```
+
+
+## Datasets
+
+All the datasets used here are from the [UCI Machine Learning Repository](https://archive.ics.uci.edu/).
+
+### Abalone
+
+- URL to the data: <https://archive.ics.uci.edu/dataset/1/abalone>
+- Description: Predict the age of abalone from physical measurements.
+- Number of instances: 4,177
+- Features: 8
+- Reference: @misc_abalone_1
+
+```{r define-name-abalone}
+name <- "abalone"
+```
+
+The dataset needs to be download.
+```{r download-abalone, eval=FALSE}
+#| code-fold: true
+#| code-summary: Code to download the data
+
+if (!dir.exists("data")) dir.create("data")
+download.file(
+  url = str_c("https://archive.ics.uci.edu/static/public/1/", name, ".zip"), 
+  destfile = str_c("data/", name, ".zip")
+)
+```
+
+Then, we can import the dataset:
+```{r import-abalone-data}
+#| code-fold: true
+#| code-summary: Code to import the data
+tb_abalone <- read_csv(
+  file = unz(str_c("data/", name, ".zip"), str_c(name, ".data")), 
+  col_names = c(
+    "Sex", "Length", "Diameter", "Height", "Whole_weight", 
+  "Shucked_weight", "Viscera_weight", "Shell_weight", "Rings"),
+  show_col_types = FALSE
+)
+```
+The target variable is `sex`. Let us turn it in a $\{0,1\}$ variable.
+```{r tb_abalone-target}
+tb_abalone <- tb_abalone |> 
+  mutate(Sex = ifelse(Sex == "M", 1, 0)) 
+target_name <- "Sex"
+```
+
+Let us call the `get_beta_fit()`{.R} from [Chapter -@sec-real-example] to get our priors.
+```{r estim-abalone, eval=FALSE}
+priors_abalone <- get_beta_fit(
+  dataset = tb_abalone, target_name = target_name, seed = 1234
+)
+```
+
+Let us save the results and the dataset:
+```{r, eval=FALSE}
+save(priors_abalone, file = "output/real-data/priors_abalone.rda")
+save(tb_abalone, file = "output/real-data/tb_abalone.rda")
+```
+
+```{r, echo=FALSE}
+load("output/real-data/priors_abalone.rda")
+```
+
+
+```{r}
+#| fig-cap: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the Abalone dataset.
+#| label: fig-example-beta-abalone
+plot_hist_scores_beta(priors_abalone, "abalone")
+```
+
+
+
+### Adult
+
+- URL to the data: <https://archive.ics.uci.edu/dataset/2/adult>
+- Description: Predict whether income exceeds $50K/yr based on census data. Also known as "Census Income" dataset.
+- Number of instances: 48,842
+- Features: 14
+- Reference: @misc_adult_2
+
+```{r define-name-adult}
+name <- "adult"
+```
+
+The dataset needs to be download.
+```{r download-adult, eval=FALSE}
+#| code-fold: true
+#| code-summary: Code to download the data
+
+if (!dir.exists("data")) dir.create("data")
+download.file(
+  url = str_c("https://archive.ics.uci.edu/static/public/2/", name, ".zip"), 
+  destfile = str_c("data/", name, ".zip")
+)
+
+info_data <- scan(
+  unz(str_c("data/", name, ".zip"), str_c(name, ".names")), 
+  what = "character", sep = "\n"
+)
+# Print the names for this dataset (not very convenient...)
+str_extract(info_data[94:length(info_data)], "^(.*):") |> 
+  str_remove(":$") |> 
+  (\(.x) str_c('"', .x, '",'))() |> 
+  cat()
+```
+
+Then, we can import the dataset:
+```{r import-adult-data}
+#| code-fold: true
+#| code-summary: Code to import the data
+tb_adult <- read_csv(
+  file = unz(str_c("data/", name, ".zip"), str_c(name, ".data")), 
+  col_names = c(
+    "age", "workclass", "fnlwgt", "education", "education-num",
+    "marital-status", "occupation", "relationship", "race", "sex",
+    "capital-gain", "capital-loss", "hours-per-week", "native-country",
+    "income"
+  ),
+  show_col_types = FALSE
+)
+```
+The target variable is `income`. Let us turn it in a $\{0,1\}$ variable and call it `high_income`.
+```{r tb_adult-target}
+tb_adult <- tb_adult |> 
+  mutate(high_income = ifelse(income == ">50K", 1, 0)) |> 
+  dplyr::select(-income)
+target_name <- "high_income"
+```
+
+Let us call the `get_beta_fit()`{.R} from [Chapter -@sec-real-example] to get our priors.
+```{r estim-adult, eval=FALSE}
+priors_adult <- get_beta_fit(
+  dataset = tb_adult, target_name = target_name, seed = 1234
+)
+```
+
+Let us save the results and the dataset:
+```{r, eval=FALSE}
+save(priors_adult, file = "output/real-data/priors_adult.rda")
+save(tb_adult, file = "output/real-data/tb_adult.rda")
+```
+
+```{r, echo=FALSE}
+load("output/real-data/priors_adult.rda")
+```
+
+
+```{r}
+#| fig-cap: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the Adult dataset.
+#| label: fig-example-beta-adult
+plot_hist_scores_beta(priors_adult, "adult")
+```
+
+<!-- ### Appartment for Rent Classified -->
+
+<!-- URL to the data: <https://archive.ics.uci.edu/dataset/555/apartment+for+rent+classified> -->
+<!-- This is a dataset of classified for apartments for rent in USA. -->
+<!-- Number of instances: 10,000 -->
+<!-- Features: 21 -->
+
+<!-- ```{r define-name-appartment} -->
+<!-- name <- "appartment" -->
+<!-- ``` -->
+
+<!-- The dataset needs to be download. -->
+<!-- ```{r download-appartment, eval=FALSE} -->
+<!-- #| code-fold: true -->
+<!-- #| code-summary: Code to download the data -->
+
+<!-- if (!dir.exists("data")) dir.create("data") -->
+<!-- download.file( -->
+<!--   url = str_c( -->
+<!--     "https://archive.ics.uci.edu/static/public/555/",  -->
+<!--     "apartment+for+rent+classified.zip" -->
+<!--   ),  -->
+<!--   destfile = str_c("data/", name, ".zip") -->
+<!-- ) -->
+<!-- ``` -->
+
+<!-- Then, we can import the dataset: -->
+<!-- ```{r import-appartment-data} -->
+<!-- #| code-fold: true -->
+<!-- #| code-summary: Code to import the data -->
+
+<!-- # Extract ZIP file -->
+<!-- unzip("data/appartment.zip", exdir = "data/appartment") -->
+<!-- # Extract the 7z file -->
+<!-- system("7z x data/appartment/apartments_for_rent_classified_100K.7z -odata/appartment") -->
+<!-- csv_file_path <- "data/appartment/apartments_for_rent_classified_100K.csv" -->
+<!-- tb_appartment <- read_csv2(csv_file_path, show_col_types = FALSE) |>  -->
+<!--   select(-id, -title, -body, -price_display, -address, -time, -price_type, -currency, -amenities, -fee) -->
+<!-- system("rm -rf data/appartment/") -->
+<!-- ``` -->
+<!-- The target variable is `sex`. Let us turn it in a $\{0,1\}$` variable. -->
+<!-- ```{r tb_appartment-target} -->
+<!-- tb_appartment <- tb_appartment |> -->
+<!--   mutate( -->
+<!--     cityname = fct_lump(cityname, prop = 0.01), -->
+<!--     state = fct_lump(state, prop = 0.02), -->
+<!--     source = fct_lump(source, prop = 0.01), -->
+<!--     latitude = as.numeric(latitude), -->
+<!--     longitude = as.numeric(longitude) -->
+<!--   ) |>  -->
+<!--   mutate(across(where(is.character), ~as.factor(as.numeric(as.factor(.x))))) |>  -->
+<!--   mutate( -->
+<!--     high_square_feet = square_feet > median(square_feet) -->
+<!--   ) |>  -->
+<!--   select(-square_feet) -->
+<!-- tb_appartment <- na.omit(tb_appartment) -->
+<!-- nrow(tb_appartment) -->
+<!-- target_name <- "high_square_feet" -->
+<!-- ``` -->
+
+<!-- Let us call the `get_beta_fit()`{.R} from [Chapter -@sec-real-example] to get our priors. -->
+<!-- ```{r estim-appartment, eval=FALSE} -->
+<!-- priors_appartment <- get_beta_fit( -->
+<!--   dataset = tb_appartment, target_name = target_name, seed = 1234 -->
+<!-- ) -->
+<!-- ``` -->
+
+<!-- Let us save the results and the dataset: -->
+<!-- ```{r, eval=FALSE} -->
+<!-- save(priors_appartment, file = "output/real-data/priors_appartment.rda") -->
+<!-- save(tb_appartment, file = "output/real-data/tb_appartment.rda") -->
+<!-- ``` -->
+
+<!-- ```{r, echo=FALSE} -->
+<!-- load("output/real-data/priors_appartment.rda") -->
+<!-- ``` -->
+
+
+<!-- ```{r} -->
+<!-- #| fig-cap: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the Appartment dataset. -->
+<!-- #| label: fig-example-beta-appartment -->
+<!-- plot_hist_scores_beta(priors_appartment, "appartment") -->
+<!-- ``` -->
+
+
+### Bank Marketing
+
+- URL to the data: <https://archive.ics.uci.edu/dataset/222/bank+marketing>
+- Description: The data is related with direct marketing campaigns (phone calls) of a Portuguese banking institution. The classification goal is to predict if the client will subscribe a term deposit (variable y).
+- Number of instances: 45,211
+- Features: 16
+- Reference: @misc_bank_marketing_222
+
+```{r define-name-bank}
+name <- "bank"
+```
+
+The dataset needs to be download.
+```{r download-bank, eval=FALSE}
+#| code-fold: true
+#| code-summary: Code to download the data
+
+if (!dir.exists("data")) dir.create("data")
+download.file(
+  url = "https://archive.ics.uci.edu/static/public/222/bank+marketing.zip", 
+  destfile = str_c("data/", name, ".zip")
+)
+```
+
+Then, we can import the dataset:
+```{r import-bank-data}
+#| code-fold: true
+#| code-summary: Code to import the data
+dir.create("data/bank/")
+system("unzip data/bank.zip -d data/bank/")
+system("unzip data/bank/bank.zip -d data/bank/")
+tb_bank <- read_csv2(
+  file = unz(str_c("data/bank/", name, ".zip"), str_c("bank-full.csv")), 
+  skip = 1,
+  col_names = c(
+    "age", "job", "marital", "education", "default", "balance", "housing", 
+    "loan", "contact", "day", "month", "duration", "campaign", "pdays", 
+    "previous", "poutcome", "y"
+  ),
+  show_col_types = FALSE
+)
+system("rm -rf data/bank/")
+```
+The target variable is `y` (whether the client will subscribe a term deposit). Let us turn it in a $\{0,1\}$ variable.
+```{r tb_bank-target}
+tb_bank <- tb_bank |> 
+  mutate(y = ifelse(y == "yes", 1, 0)) 
+target_name <- "y"
+```
+
+Let us call the `get_beta_fit()`{.R} from [Chapter -@sec-real-example] to get our priors.
+```{r estim-bank, eval=FALSE}
+priors_bank <- get_beta_fit(
+  dataset = tb_bank, target_name = target_name, seed = 1234
+)
+```
+
+Let us save the results and the dataset:
+```{r, eval=FALSE}
+save(priors_bank, file = "output/real-data/priors_bank.rda")
+save(tb_bank, file = "output/real-data/tb_bank.rda")
+```
+
+```{r, echo=FALSE}
+load("output/real-data/priors_bank.rda")
+```
+
+
+```{r}
+#| fig-cap: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the Bank Marketing dataset.
+#| label: fig-example-beta-bank
+plot_hist_scores_beta(priors_bank, "bank")
+```
+
+### Default of Credit Card Clients
+
+- URL to the data: <https://archive.ics.uci.edu/dataset/350/default+of+credit+card+clients>
+- Description: This research aimed at the case of customers' default payments in Taiwan and compares the predictive accuracy of probability of default among six data mining methods.
+- Number of instances: 30,000
+- Features: 23
+- Reference: @misc_default_of_credit_card_clients_350
+
+```{r define-name-default}
+name <- "default"
+```
+
+The dataset needs to be download.
+```{r download-default, eval=FALSE}
+#| code-fold: true
+#| code-summary: Code to download the data
+
+if (!dir.exists("data")) dir.create("data")
+download.file(
+  url = str_c("https://archive.ics.uci.edu/static/public/350/",
+              "default+of+credit+card+clients.zip"
+  ), 
+  destfile = str_c("data/", name, ".zip")
+)
+```
+
+Then, we can import the dataset:
+```{r import-default-data}
+#| code-fold: true
+#| code-summary: Code to import the data
+dir.create("data/default/")
+system("unzip data/default.zip -d data/default/")
+tb_default <- readxl::read_excel(
+  path = "data/default/default of credit card clients.xls",
+  skip = 1
+) |> 
+  select(-ID)
+system("rm -rf data/default")
+```
+The target variable is `defalut` (1 if default, 0 otherwise).
+```{r tb_default-target}
+tb_default <- 
+  tb_default |> 
+  mutate(
+    across(all_of(c(
+      "SEX", "EDUCATION", "MARRIAGE", 
+      "PAY_0", "PAY_2", "PAY_3", "PAY_4", "PAY_5", "PAY_6")), as.factor)
+  ) |> 
+  mutate(
+    across(all_of(c(
+      "EDUCATION", "PAY_0", "PAY_2", "PAY_3", "PAY_4", "PAY_5", "PAY_6"
+    )), ~fct_lump(.x, prop = .05)
+    )
+  ) |> 
+  rename(default = `default payment next month`)
+target_name <- "default"
+```
+
+Let us call the `get_beta_fit()`{.R} from [Chapter -@sec-real-example] to get our priors.
+```{r estim-default, eval=FALSE}
+priors_default <- get_beta_fit(
+  dataset = tb_default, target_name = target_name, seed = 1234
+)
+```
+
+Let us save the results and the dataset:
+```{r, eval=FALSE}
+save(priors_default, file = "output/real-data/priors_default.rda")
+save(tb_default, file = "output/real-data/tb_default.rda")
+```
+
+```{r, echo=FALSE}
+load("output/real-data/priors_default.rda")
+```
+
+
+```{r}
+#| fig-cap: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the Default of Credit Card Clients dataset.
+#| label: fig-example-beta-default
+plot_hist_scores_beta(priors_default, "default")
+```
+
+
+### Dry Bean
+
+- URL to the data: <https://archive.ics.uci.edu/dataset/602/dry+bean+dataset>
+- Description: Images of 13,611 grains of 7 different registered dry beans were taken with a high-resolution camera. A total of 16 features; 12 dimensions and 4 shape forms, were obtained from the grains.
+- Number of instances: 13,611
+- Features: 16
+- References: @misc_dry_bean_602
+
+```{r define-name-drybean}
+name <- "drybean"
+```
+
+The dataset needs to be download.
+```{r download-drybean, eval=FALSE}
+#| code-fold: true
+#| code-summary: Code to download the data
+
+if (!dir.exists("data")) dir.create("data")
+download.file(
+  url = "https://archive.ics.uci.edu/static/public/602/dry+bean+dataset.zip", 
+  destfile = str_c("data/", name, ".zip")
+)
+```
+
+Then, we can import the dataset:
+```{r import-drybean-data}
+#| code-fold: true
+#| code-summary: Code to import the data
+dir.create("data/drybean/")
+system("unzip data/drybean.zip -d data/drybean/")
+tb_drybean <- readxl::read_excel(
+  path = "data/drybean/DryBeanDataset/Dry_Bean_Dataset.xlsx"
+)
+system("rm -rf data/drybean")
+```
+The target variable is `sex`. Let us turn it in a $\{0,1\}$ variable.
+```{r tb_drybean-target}
+tb_drybean <- tb_drybean |> 
+  mutate(is_dermason = ifelse(Class == "DERMASON", 1, 0)) |> 
+  select(-Class)
+target_name <- "is_dermason"
+```
+
+Let us call the `get_beta_fit()`{.R} from [Chapter -@sec-real-example] to get our priors.
+```{r estim-drybean, eval=FALSE}
+priors_drybean <- get_beta_fit(
+  dataset = tb_drybean, target_name = target_name, seed = 1234
+)
+```
+
+Let us save the results and the dataset:
+```{r, eval=FALSE}
+save(priors_drybean, file = "output/real-data/priors_drybean.rda")
+save(tb_drybean, file = "output/real-data/tb_drybean.rda")
+```
+
+```{r, echo=FALSE}
+load("output/real-data/priors_drybean.rda")
+```
+
+
+```{r}
+#| fig-cap: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the Dry Bean dataset.
+#| label: fig-example-beta-drybean
+plot_hist_scores_beta(priors_drybean, "drybean")
+```
+
+### In-Vehicle Coupon Recommendation
+
+- URL to the data: <https://archive.ics.uci.edu/dataset/603/in+vehicle+coupon+recommendation>
+- Description: This data studies whether a person will accept the coupon recommended to him in different driving scenarios.
+- Number of instances: 12,684
+- Features: 25
+- References: @misc_vehicle_coupon_recommendation_603
+
+```{r define-name-coupon}
+name <- "coupon"
+```
+
+The dataset needs to be download.
+```{r download-coupon, eval=FALSE}
+#| code-fold: true
+#| code-summary: Code to download the data
+
+if (!dir.exists("data")) dir.create("data")
+download.file(
+  url = str_c("https://archive.ics.uci.edu/static/public/603/", 
+              "in+vehicle+coupon+recommendation.zip"), 
+  destfile = str_c("data/", name, ".zip")
+)
+```
+
+Then, we can import the dataset:
+```{r import-coupon-data}
+#| code-fold: true
+#| code-summary: Code to import the data
+tb_coupon <- read_csv(
+  file = unz(str_c("data/", name, ".zip"), "in-vehicle-coupon-recommendation.csv"),
+  show_col_types = FALSE
+)
+```
+The target variable is `y` (1 if the person accepted the coupon, 0 otherwise).
+```{r tb_coupon-target}
+tb_coupon <- 
+  tb_coupon |> 
+  mutate(
+    temperature = as.factor(temperature),
+    has_children = as.factor(has_children),
+    toCoupon_GEQ15min = as.factor(toCoupon_GEQ15min),
+    toCoupon_GEQ25min = as.factor(toCoupon_GEQ25min),
+    direction_same = as.factor(direction_same)
+  ) |> 
+  select(-toCoupon_GEQ5min, -direction_opp, -car) |> 
+  rename(y = Y)
+
+tb_coupon <- na.omit(tb_coupon)
+
+target_name <- "y"
+```
+
+Let us call the `get_beta_fit()`{.R} from [Chapter -@sec-real-example] to get our priors.
+```{r estim-coupon, eval=FALSE}
+priors_coupon <- get_beta_fit(
+  dataset = tb_coupon, target_name = target_name, seed = 1234
+)
+```
+
+Let us save the results and the dataset:
+```{r, eval=FALSE}
+save(priors_coupon, file = "output/real-data/priors_coupon.rda")
+save(tb_coupon, file = "output/real-data/tb_coupon.rda")
+```
+
+```{r, echo=FALSE}
+load("output/real-data/priors_coupon.rda")
+```
+
+
+```{r}
+#| fig-cap: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the In-Vehicle Coupon Recommendation dataset.
+#| label: fig-example-beta-coupon
+plot_hist_scores_beta(priors_coupon, "coupon")
+```
+
+<!-- ### Letter Recognition -->
+
+<!-- URL to the data: <https://archive.ics.uci.edu/dataset/59/letter+recognition> -->
+<!-- Description: Database of character image features; try to identify the letter. -->
+<!-- Number of instances: 20,000 -->
+<!-- Features: 16 -->
+
+<!-- ```{r define-name-letterecognition} -->
+<!-- name <- "letterecognition" -->
+<!-- ``` -->
+
+<!-- The dataset needs to be download. -->
+<!-- ```{r download-letterecognition, eval=FALSE} -->
+<!-- #| code-fold: true -->
+<!-- #| code-summary: Code to download the data -->
+
+<!-- if (!dir.exists("data")) dir.create("data") -->
+<!-- download.file( -->
+<!--   url = "https://archive.ics.uci.edu/static/public/59/letter+recognition.zip",  -->
+<!--   destfile = str_c("data/", name, ".zip") -->
+<!-- ) -->
+<!-- ``` -->
+
+<!-- Then, we can import the dataset: -->
+<!-- ```{r import-letterecognition-data} -->
+<!-- #| code-fold: true -->
+<!-- #| code-summary: Code to import the data -->
+<!-- tb_letterecognition <- read_csv( -->
+<!--   file = unz(str_c("data/", name, ".zip"), "letter-recognition.data"),  -->
+<!--   col_names = c( -->
+<!--     "lettr", "x-box", "y-box", "width", "high", "onpix", "x-bar", "y-bar",  -->
+<!--     "x2bar", "y2bar", "xybar", "x2ybr", "xy2br", "x-ege", "xegvy", "y-ege",  -->
+<!--     "yegvx" -->
+<!--   ), -->
+<!--   show_col_types = FALSE -->
+<!-- ) -->
+<!-- ``` -->
+<!-- The target variable is `lettr`. Let us turn create a $\{0,1\}$` variable where whe predict whether the letter is "U" or not. -->
+<!-- ```{r tb_letterecognition-target} -->
+<!-- tb_letterecognition <-  -->
+<!--   tb_letterecognition |>  -->
+<!--   mutate(across(where(is.numeric), ~as.factor(.x))) |>  -->
+<!--   mutate(is_u = ifelse(lettr == "U", 1, 0)) |>  -->
+<!--   select(-lettr) -->
+<!-- target_name <- "is_u" -->
+<!-- ``` -->
+
+<!-- Let us call the `get_beta_fit()`{.R} from [Chapter -@sec-real-example] to get our priors. -->
+<!-- ```{r estim-letterecognition, eval=FALSE} -->
+<!-- priors_letterecognition <- get_beta_fit( -->
+<!--   dataset = tb_letterecognition, target_name = target_name, seed = 1234 -->
+<!-- ) -->
+<!-- ``` -->
+
+<!-- Let us save the results and the dataset: -->
+<!-- ```{r, eval=FALSE} -->
+<!-- save(priors_letterecognition, file = "output/real-data/priors_letterecognition.rda") -->
+<!-- save(tb_letterecognition, file = "output/real-data/tb_letterecognition.rda") -->
+<!-- ``` -->
+
+<!-- ```{r, echo=FALSE} -->
+<!-- load("output/real-data/priors_letterecognition.rda") -->
+<!-- ``` -->
+
+
+<!-- ```{r} -->
+<!-- #| fig-cap: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the Letter Recognition dataset. -->
+<!-- #| label: fig-example-beta-letterecognition -->
+<!-- plot_hist_scores_beta(priors_letterecognition, "letterecognition") -->
+<!-- ``` -->
+
+### Mushroom
+
+- URL to the data: <https://archive.ics.uci.edu/dataset/73/mushroom>
+- Description: From Audobon Society Field Guide; mushrooms described in terms of physical characteristics; classification: poisonous or edible.
+- Number of instances: 8,124
+- Features: 22
+- References: @misc_mushroom_73
+
+```{r define-name-mushroom}
+name <- "mushroom"
+```
+
+The dataset needs to be download.
+```{r download-mushroom, eval=FALSE}
+#| code-fold: true
+#| code-summary: Code to download the data
+
+if (!dir.exists("data")) dir.create("data")
+download.file(
+  url = str_c("https://archive.ics.uci.edu/static/public/73/mushroom.zip"), 
+  destfile = str_c("data/", name, ".zip")
+)
+```
+
+Then, we can import the dataset:
+```{r import-mushroom-data}
+#| code-fold: true
+#| code-summary: Code to import the data
+tb_mushroom <- read_csv(
+  file = unz(str_c("data/", name, ".zip"), "agaricus-lepiota.data"), 
+  col_names = c(
+    "edible",
+    "cap_shape", "cap_surface", "cap_color", "bruises", "odor", 
+    "gill_attachment", "gill_spacing", "gill_size", "gill_color", 
+    "stalk_shape", "stalk_root", "stalk_surface_above_ring",
+    "stalk_surface_below_ring", "stalk_color_above_ring", 
+    "stalk_color_below_ring", "veil_type", "veil_color", "ring_number", 
+    "ring_type", "spore_print_color", "population", "habitat"
+  ),
+  show_col_types = FALSE
+)
+```
+The target variable is `edible`. Let us turn it in a $\{0,1\}$ variable.
+```{r tb_mushroom-target}
+tb_mushroom <- tb_mushroom |> 
+  mutate(bruises = ifelse(bruises == TRUE, "yes", "no")) |> 
+  mutate(edible = ifelse(edible == "e", 1, 0)) |> 
+  select(-veil_type)
+target_name <- "edible"
+```
+
+Let us call the `get_beta_fit()`{.R} from [Chapter -@sec-real-example] to get our priors.
+```{r estim-mushroom, eval=FALSE}
+priors_mushroom <- get_beta_fit(
+  dataset = tb_mushroom, target_name = target_name, seed = 1234
+)
+```
+
+Let us save the results and the dataset:
+```{r, eval=FALSE}
+save(priors_mushroom, file = "output/real-data/priors_mushroom.rda")
+save(tb_mushroom, file = "output/real-data/tb_mushroom.rda")
+```
+
+```{r, echo=FALSE}
+load("output/real-data/priors_mushroom.rda")
+```
+
+
+```{r}
+#| fig-cap: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the Mushroom dataset.
+#| label: fig-example-beta-mushroom
+plot_hist_scores_beta(priors_mushroom, "mushroom")
+```
+
+### Occupancy Detection
+
+- URL to the data: <https://archive.ics.uci.edu/dataset/357/occupancy+detection>
+- Description: Predict the age of occupancy from physical measurements.
+- Number of instances: 20,560
+- Features: 6
+- References: @misc_occupancy_detection__357
+
+```{r define-name-occupancy}
+name <- "occupancy"
+```
+
+The dataset needs to be download.
+```{r download-occupancy, eval=FALSE}
+#| code-fold: true
+#| code-summary: Code to download the data
+
+if (!dir.exists("data")) dir.create("data")
+download.file(
+  url = str_c("https://archive.ics.uci.edu/static/public/357/",
+              "occupancy+detection.zip"), 
+  destfile = str_c("data/", name, ".zip")
+)
+```
+
+Then, we can import the dataset:
+```{r import-occupancy-data}
+#| code-fold: true
+#| code-summary: Code to import the data
+tb_occupancy <- read_csv(
+  file = unz(str_c("data/", name, ".zip"), "datatraining.txt"), 
+  col_names = c(
+    "id", "date","Temperature","Humidity","Light","CO2",
+    "HumidityRatio","Occupancy"
+  ),
+  show_col_types = FALSE, skip = 1
+) |> 
+  bind_rows(
+    read_csv(
+      file = unz(str_c("data/", name, ".zip"), "datatest.txt"), 
+      col_names = c(
+        "id", "date","Temperature","Humidity","Light","CO2",
+        "HumidityRatio","Occupancy"
+      ),
+      show_col_types = FALSE, skip = 1,
+    )
+  ) |> 
+  bind_rows(
+    read_csv(
+      file = unz(str_c("data/", name, ".zip"), "datatest2.txt"), 
+      show_col_types = FALSE, skip = 1,
+      col_names = c(
+        "id", "date","Temperature","Humidity","Light","CO2",
+        "HumidityRatio","Occupancy"
+      ),
+    )
+  ) |> 
+  select(-id)
+```
+The target variable is `Occupancy`.
+```{r tb_occupancy-target}
+tb_occupancy <- tb_occupancy |> 
+  select(-date)
+target_name <- "Occupancy"
+```
+
+Let us call the `get_beta_fit()`{.R} from [Chapter -@sec-real-example] to get our priors.
+```{r estim-occupancy, eval=FALSE}
+priors_occupancy <- get_beta_fit(
+  dataset = tb_occupancy, target_name = target_name, seed = 1234
+)
+```
+
+Let us save the results and the dataset:
+```{r, eval=FALSE}
+save(priors_occupancy, file = "output/real-data/priors_occupancy.rda")
+save(tb_occupancy, file = "output/real-data/tb_occupancy.rda")
+```
+
+```{r, echo=FALSE}
+load("output/real-data/priors_occupancy.rda")
+```
+
+
+```{r}
+#| fig-cap: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the Occupancy Detection dataset.
+#| label: fig-example-beta-occupancy
+plot_hist_scores_beta(priors_occupancy, "occupancy")
+```
+
+<!-- ### Online Shoppers Purchasing Intention -->
+
+<!-- URL to the data: <https://archive.ics.uci.edu/dataset/468/online+shoppers+purchasing+intention+dataset> -->
+<!-- Description: Of the 12,330 sessions in the dataset, 84.5% (10,422) were negative class samples that did not end with shopping, and the rest (1908) were positive class samples ending with shopping. -->
+<!-- Number of instances: 12,330 -->
+<!-- Features: 17 -->
+
+<!-- ```{r define-name-onlineshoppers} -->
+<!-- name <- "onlineshoppers" -->
+<!-- ``` -->
+
+<!-- The dataset needs to be download. -->
+<!-- ```{r download-onlineshoppers, eval=FALSE} -->
+<!-- #| code-fold: true -->
+<!-- #| code-summary: Code to download the data -->
+
+<!-- if (!dir.exists("data")) dir.create("data") -->
+<!-- download.file( -->
+<!--   url = str_c("https://archive.ics.uci.edu/static/public/468/", -->
+<!--               "online+shoppers+purchasing+intention+dataset.zip"),  -->
+<!--   destfile = str_c("data/", name, ".zip") -->
+<!-- ) -->
+<!-- ``` -->
+
+<!-- Then, we can import the dataset: -->
+<!-- ```{r import-onlineshoppers-data} -->
+<!-- #| code-fold: true -->
+<!-- #| code-summary: Code to import the data -->
+<!-- tb_onlineshoppers <- read_csv( -->
+<!--   file = unz(str_c("data/", name, ".zip"), "online_shoppers_intention.csv"), -->
+<!--   show_col_types = FALSE -->
+<!-- ) -->
+<!-- ``` -->
+<!-- The target variable is `sex`. Let us turn it in a $\{0,1\}$` variable. -->
+<!-- ```{r tb_onlineshoppers-target} -->
+<!-- tb_onlineshoppers <-  -->
+<!--   tb_onlineshoppers |>  -->
+<!--   mutate(across(where(is.character), ~as.factor(.x))) |>  -->
+<!--   mutate(across(where(is.logical), ~as.factor(.x))) |>  -->
+<!--   mutate(across(all_of(c( -->
+<!--     "Administrative", "OperatingSystems", "Browser", "Region" -->
+<!--   )), ~as.factor(.x))) |>  -->
+<!--   mutate((across(all_of(c( -->
+<!--     "Informational", "SpecialDay", "TrafficType", "Informational_Duration", -->
+<!--     "Administrative_Duration", "PageValues", "BounceRates", "ProductRelated_Duration", "ProductRelated", "ExitRates" -->
+<!--   )), ~jitter(.x, 0.1))) -->
+<!--   ) |>  -->
+<!--   mutate(Revenue = ifelse(Revenue == TRUE, 1, 0)) |>  -->
+<!--   rename(revenue = Revenue) -->
+<!-- target_name <- "revenue" -->
+<!-- ``` -->
+
+<!-- Let us call the `get_beta_fit()`{.R} from [Chapter -@sec-real-example] to get our priors. -->
+<!-- ```{r estim-onlineshoppers, eval=FALSE} -->
+<!-- priors_onlineshoppers <- get_beta_fit( -->
+<!--   dataset = tb_onlineshoppers, target_name = target_name, seed = 1234 -->
+<!-- ) -->
+<!-- ``` -->
+
+<!-- Let us save the results and the dataset: -->
+<!-- ```{r, eval=FALSE} -->
+<!-- save(priors_onlineshoppers, file = "output/real-data/priors_onlineshoppers.rda") -->
+<!-- save(tb_onlineshoppers, file = "output/real-data/tb_onlineshoppers.rda") -->
+<!-- ``` -->
+
+<!-- ```{r, echo=FALSE} -->
+<!-- load("output/real-data/priors_onlineshoppers.rda") -->
+<!-- ``` -->
+
+
+<!-- ```{r} -->
+<!-- #| fig-cap: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the Online Shoppers Purchasing Intention dataset. -->
+<!-- #| label: fig-example-beta-onlineshoppers -->
+<!-- plot_hist_scores_beta(priors_onlineshoppers, "onlineshoppers") -->
+<!-- ``` -->
+
+<!-- ### Online News Popularity -->
+
+<!-- URL to the data: <https://archive.ics.uci.edu/dataset/332/online+news+popularity> -->
+<!-- Description: Predict the age of newspopularity from physical measurements. -->
+<!-- Number of instances: 39,797 -->
+<!-- Features: 58 -->
+
+<!-- ```{r define-name-newspopularity} -->
+<!-- name <- "newspopularity" -->
+<!-- ``` -->
+
+<!-- The dataset needs to be download. -->
+<!-- ```{r download-newspopularity, eval=FALSE} -->
+<!-- #| code-fold: true -->
+<!-- #| code-summary: Code to download the data -->
+
+<!-- if (!dir.exists("data")) dir.create("data") -->
+<!-- download.file( -->
+<!--   url = str_c("https://archive.ics.uci.edu/static/public/332/", -->
+<!--               "online+news+popularity.zip"),  -->
+<!--   destfile = str_c("data/", name, ".zip") -->
+<!-- ) -->
+<!-- ``` -->
+
+<!-- Then, we can import the dataset: -->
+<!-- ```{r import-newspopularity-data} -->
+<!-- #| code-fold: true -->
+<!-- #| code-summary: Code to import the data -->
+<!-- dir.create("data/newspopularity") -->
+<!-- unzip("data/newspopularity.zip", exdir = "data/newspopularity") -->
+<!-- tb_newspopularity <- read_csv( -->
+<!--   file = str_c("data/newspopularity/OnlineNewsPopularity/", -->
+<!--                "OnlineNewsPopularity.csv"),  -->
+<!--   show_col_types = FALSE -->
+<!-- ) -->
+<!-- system("rm -rf data/newspopularity") -->
+<!-- ``` -->
+
+<!-- We define the target variable, `high_shares` as a binary variable which is equal to 1 if the number of shares is higher than the median value found in the sample, and 0 otherwise. -->
+
+<!-- ```{r tb_newspopularity-target} -->
+<!-- tb_newspopularity <-  -->
+<!--   tb_newspopularity |>  -->
+<!--   select(-url) |>  -->
+<!--   mutate( -->
+<!--     across( -->
+<!--       all_of(c( -->
+<!--         "data_channel_is_lifestyle", "data_channel_is_entertainment", -->
+<!--         "data_channel_is_bus", "data_channel_is_socmed",  -->
+<!--         "data_channel_is_tech", "data_channel_is_world", -->
+<!--         "weekday_is_monday", "weekday_is_tuesday", "weekday_is_wednesday", -->
+<!--         "weekday_is_thursday", "weekday_is_friday", "weekday_is_saturday", "is_weekend" -->
+<!--       )), -->
+<!--       ~as.factor(.x) -->
+<!--     ), -->
+<!--     high_shares = ifelse(shares > median(shares), yes = 1, no = 0), -->
+<!--     across(all_of(c( -->
+<!--       "n_non_stop_words", "num_keywords", "kw_min_min", "n_tokens_title", "kw_max_max", "min_positive_polarity", "max_positive_polarity", "max_negative_polarity", "num_self_hrefs", "num_imgs", "num_hrefs" -->
+<!--       )), ~jitter(.x, factor = 0.01)) -->
+<!--   ) |>  -->
+<!--   select( -->
+<!--     -shares, -weekday_is_sunday, -is_weekend, -global_rate_positive_words, -->
+<!--     -global_rate_negative_words, -rate_positive_words, -abs_title_subjectivity, -->
+<!--     -abs_title_sentiment_polarity -->
+<!--   ) -->
+<!-- target_name <- "high_shares" -->
+<!-- ``` -->
+
+<!-- Let us call the `get_beta_fit()`{.R} from [Chapter -@sec-real-example] to get our priors. -->
+<!-- ```{r estim-newspopularity, eval=FALSE} -->
+<!-- priors_newspopularity <- get_beta_fit( -->
+<!--   dataset = tb_newspopularity, target_name = target_name, seed = 1234 -->
+<!-- ) -->
+<!-- ``` -->
+
+<!-- Let us save the results and the dataset: -->
+<!-- ```{r, eval=FALSE} -->
+<!-- save(priors_newspopularity, file = "output/real-data/priors_newspopularity.rda") -->
+<!-- save(tb_newspopularity, file = "output/real-data/tb_newspopularity.rda") -->
+<!-- ``` -->
+
+<!-- ```{r, echo=FALSE} -->
+<!-- load("output/real-data/priors_newspopularity.rda") -->
+<!-- ``` -->
+
+
+<!-- ```{r} -->
+<!-- #| fig-cap: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the Online News Popularity dataset. -->
+<!-- #| label: fig-example-beta-newspopularity -->
+<!-- plot_hist_scores_beta(priors_newspopularity, "newspopularity") -->
+<!-- ``` -->
+
+
+### Wine Quality
+
+- URL to the data: <https://archive.ics.uci.edu/dataset/186/wine+quality>
+- Description: Two datasets are included, related to red and white vinho verde wine samples, from the north of Portugal. The goal is to model wine quality based on physicochemical tests (see [Cortez et al., 2009], http://www3.dsi.uminho.pt/pcortez/wine/).
+- Number of instances: 4,898
+- Features: 11
+- References: @misc_wine_quality_186
+
+```{r define-name-winequality}
+name <- "winequality"
+```
+
+The dataset needs to be download.
+```{r download-winequality, eval=FALSE}
+#| code-fold: true
+#| code-summary: Code to download the data
+
+if (!dir.exists("data")) dir.create("data")
+download.file(
+  url = str_c("https://archive.ics.uci.edu/static/public/186/",
+              "wine+quality.zip"), 
+  destfile = str_c("data/", name, ".zip")
+)
+```
+
+Then, we can import the dataset:
+```{r import-winequality-data}
+#| code-fold: true
+#| code-summary: Code to import the data
+red_wine <- read_csv2(
+  file = unz(str_c("data/", name, ".zip"), "winequality-red.csv"),
+  show_col_types = FALSE) |>
+  mutate(wine_type = "red")
+white_wine <- read_csv2(
+  file = unz(str_c("data/", name, ".zip"), "winequality-white.csv"),
+  show_col_types = FALSE) |> 
+  mutate(wine_type = "white") |> 
+  mutate(`residual sugar` = as.numeric(`residual sugar`))
+```
+
+The target variable is `quality`. Let us use it to define a $\{0,1\}$ variable. We define the variable `high_quality` which equals 1 if the quality is larger or equal than 6.
+
+```{r tb_winequality-target}
+tb_winequality <- red_wine |> bind_rows(white_wine) |> 
+  mutate(high_quality = ifelse(quality >= 6, 1, 0)) |> 
+  mutate(across(all_of(c(
+    "density", "chlorides", "volatile acidity", "sulphates", "citric acid"
+    )), ~as.numeric(.x))) |> 
+  select(-quality)
+tb_winequality <- na.omit(tb_winequality)
+target_name <- "high_quality"
+```
+
+Let us call the `get_beta_fit()`{.R} from [Chapter -@sec-real-example] to get our priors.
+```{r estim-winequality, eval=FALSE}
+priors_winequality <- get_beta_fit(
+  dataset = tb_winequality, target_name = target_name, seed = 1234
+)
+```
+
+Let us save the results and the dataset:
+```{r, eval=FALSE}
+save(priors_winequality, file = "output/real-data/priors_winequality.rda")
+save(tb_winequality, file = "output/real-data/tb_winequality.rda")
+```
+
+```{r, echo=FALSE}
+load("output/real-data/priors_winequality.rda")
+```
+
+
+```{r}
+#| fig-cap: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the Wine Quality dataset.
+#| label: fig-example-beta-winequality
+plot_hist_scores_beta(priors_winequality, "winequality")
+```
+
+
+
+### Spambase
+
+- URL to the data: <https://archive.ics.uci.edu/dataset/94/spambase>
+- Description: Classifying Email as Spam or Non-Spam
+- Number of instances: 4,601
+- Features: 57
+- References: @misc_spambase_94
+
+```{r define-name-spambase}
+name <- "spambase"
+```
+
+The dataset needs to be download.
+```{r download-spambase, eval=FALSE}
+#| code-fold: true
+#| code-summary: Code to download the data
+
+if (!dir.exists("data")) dir.create("data")
+download.file(
+  url = str_c("https://archive.ics.uci.edu/static/public/2/", name, ".zip"), 
+  destfile = str_c("data/", name, ".zip")
+)
+
+info_data <- scan(
+  unz(str_c("data/", name, ".zip"), str_c(name, ".names")), 
+  what = "character", sep = "\n"
+)
+# Print the names for this dataset (not very convenient...)
+str_extract(info_data[94:length(info_data)], "^(.*):") |> 
+  str_remove(":$") |> 
+  (\(.x) str_c('"', .x, '",'))() |> 
+  cat()
+```
+
+Then, we can import the dataset:
+```{r import-spambase-data}
+#| code-fold: true
+#| code-summary: Code to import the data
+tb_spambase <- read_csv(
+  file = unz(str_c("data/", name, ".zip"), str_c(name, ".data")),
+  col_names = c(
+    "word_freq_make", "word_freq_address", "word_freq_all", "word_freq_3d",
+    "word_freq_our", "word_freq_over", "word_freq_remove", "word_freq_internet",
+    "word_freq_order", "word_freq_mail", "word_freq_receive", "word_freq_will",
+    "word_freq_people", "word_freq_report", "word_freq_addresses",
+    "word_freq_free", "word_freq_business", "word_freq_email", "word_freq_you",
+    "word_freq_credit", "word_freq_your", "word_freq_font", "word_freq_000",
+    "word_freq_money", "word_freq_hp", "word_freq_hpl", "word_freq_george",
+    "word_freq_650", "word_freq_lab", "word_freq_labs", "word_freq_telnet",
+    "word_freq_857", "word_freq_data", "word_freq_415", "word_freq_85",
+    "word_freq_technology", "word_freq_1999", "word_freq_parts", "word_freq_pm",
+    "word_freq_direct", "word_freq_cs", "word_freq_meeting",
+    "word_freq_original", "word_freq_project", "word_freq_re", "word_freq_edu",
+    "word_freq_table", "word_freq_conference", "char_freq_;", "char_freq_(",
+    "char_freq_[", "char_freq_!", "char_freq_$", "char_freq_#",
+    "capital_run_length_average", "capital_run_length_longest",
+    "capital_run_length_total", "is_spam"
+  ),
+  show_col_types = FALSE
+)
+```
+
+The target variable:
+```{r target-variable-spambase}
+target_name <- "is_spam"
+```
+
+
+Let us call the `get_beta_fit()`{.R} from [Chapter -@sec-real-example] to get our priors.
+```{r estim-spambase, eval=FALSE}
+priors_spambase <- get_beta_fit(
+  dataset = tb_spambase, target_name = target_name, seed = 1234
+)
+```
+
+Let us save the results and the dataset:
+```{r, eval=FALSE}
+save(priors_spambase, file = str_c("output/real-data/priors_spambase.rda"))
+save(tb_spambase, file = "output/real-data/tb_spambase.rda")
+```
+
+```{r, echo=FALSE}
+load(str_c("output/real-data/priors_", name, ".rda"))
+```
+
+
+```{r}
+#| fig-cap: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the spambase dataset.
+#| label: fig-example-beta-spambase
+plot_hist_scores_beta(priors_spambase, "spambase")
+```
+
+## Summary
+
+
+```{r}
+#| code-fold: true
+#| code-summary: Codes to get the key characteristics of the datasets
+#| tbl-cap: "Key characteristics of the datasets."
+#| label: tbl-datasets-characteristics
+datasets <- tribble(
+  ~name, ~target_name, ~reference,
+  "abalone", "Sex", "@misc_abalone_1",
+  "adult", "high_income", "@misc_adult_2",
+  "bank", "y", "@misc_bank_marketing_222",
+  "default", "default", "@misc_default_of_credit_card_clients_350",
+  "drybean", "is_dermason", "@misc_dry_bean_602",
+  "coupon", "y", "@misc_vehicle_coupon_recommendation_603",
+  "mushroom", "edible", "@misc_mushroom_73",
+  "occupancy", "Occupancy", "@misc_occupancy_detection__357",
+  "winequality", "high_quality", "@misc_wine_quality_186",
+  "spambase", "is_spam", "@misc_spambase_94"
+)
+
+dataset_info <- vector(mode = "list", length = nrow(datasets))
+for (i in 1:nrow(datasets)) {
+  name <- datasets$name[i]
+  target_name <- datasets$target_name[i]
+  current_data <- get(str_c('tb_', name))
+  current_target <- current_data |> pull(!!target_name)
+  current_ref <- datasets$reference[i]
+  n <- nrow(current_data)
+  n_col <- ncol(current_data)
+  n_numeric <- current_data |> select(-!!target_name) |> 
+    select(where(is.numeric)) |> 
+    ncol()
+  dataset_info[[i]] <- tibble(
+    Dataset = name, 
+    n = n, 
+    `# features` = n_col-1,
+    `# numeric features` = n_numeric,
+    `Prop. target = 1` = round(sum(current_target == 1) / n, 2),
+    Reference = current_ref
+  )
+}
+
+dataset_info <- list_rbind(dataset_info)
+knitr::kable(dataset_info, booktabs = TRUE, format.args = list(big.mark = ","))
+```
+

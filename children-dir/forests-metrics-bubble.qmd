@@ -1,0 +1,10 @@
+##### `r tb_labs |> slice(i) |> pull(scenario)`
+
+```{r}
+#| echo: false
+#| warning: false
+#| fig-cap: !expr glue::glue("{tb_labs |> slice(i) |> pull(label)}")
+lab <- tb_labs |> slice(i) |> pull("label")
+scenario_number <- tb_labs |> slice(i) |> pull("scenario")
+plot_kl_vs_calib(scenario_number = scenario_number)
+```

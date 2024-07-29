@@ -1,0 +1,10 @@
+##### `r tb_labs |> slice(i) |> pull(no_noise)`
+
+```{r}
+#| echo: false
+#| warning: false
+#| fig-cap: !expr glue::glue("{tb_labs |> slice(i) |> pull(label)}")
+#| fig-width: 10
+scenario_number <- tb_labs |> slice(i) |> pull("scenario")
+print_table(scenario = scenario_number)
+```

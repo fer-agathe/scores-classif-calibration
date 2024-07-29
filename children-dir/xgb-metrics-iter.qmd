@@ -1,0 +1,9 @@
+#### `r i`
+
+```{r}
+#| echo: false
+#| warning: false
+#| fig-cap: !expr glue::glue("Metrics for Scenario {i}")
+scenario_number <- i
+plot_metrics(scenario = scenario_number)
+```

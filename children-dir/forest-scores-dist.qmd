@@ -1,0 +1,11 @@
+##### `r tb_labs |> slice(i) |> pull(scenario)`
+
+```{r}
+#| echo: false
+#| warning: false
+#| fig-cap: !expr glue::glue("{tb_labs |> slice(i) |> pull(label)}")
+lab <- tb_labs |> slice(i) |> pull("label")
+type <- tb_labs |> slice(i) |> pull("type")
+scenario_number <- tb_labs |> slice(i) |> pull("scenario")
+plot_hist_scenario(type = type, scenario = scenario_number, repn = repn)
+```

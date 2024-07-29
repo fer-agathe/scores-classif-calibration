@@ -1,0 +1,1679 @@
+# Comparison of Models
+
+
+:::{.callout-note}
+
+This chapter loads the estimated models from the previous chapters from this simulation part of the supplementary materials and compares them.
+
+:::
+
+```{r load-libraries}
+library(tidyverse)
+library(locfit)
+library(philentropy)
+
+# Colours for train/validation/test
+colour_samples <- c(
+  "Train" = "#0072B2",
+  "Validation" = "#009E73",
+  "Test" = "#D55E00"
+)
+
+# Colour for the models of interest
+colour_result_type <- c(
+  "AUC*" = "#D55E00", 
+  "Smallest" = "#56B4E9", 
+  "Largest" = "#009E73", 
+  "Brier*" = "gray",
+  "MSE*" = "#0072B2",
+  "ICI*" = "#CC79A7", 
+  "KL*" = "#E69F00",
+  "None" = "black"
+)
+```
+
+
+
+```{r define-theme_paper}
+#| code-fold: true
+#| code-summary: definition of the `theme_paper()` function (for ggplot2 graphs)
+#' Theme for ggplot2
+#'
+#' @param ... arguments passed to the theme function
+#' @export
+#' @importFrom ggplot2 element_rect element_text element_blank element_line unit
+#'   rel
+theme_paper <- function (...) {
+  ggthemes::theme_base() +
+    theme(
+      plot.background = element_blank(),
+      legend.background = element_rect(
+        fill = "transparent", linetype="solid", colour ="black"),
+      legend.position = "bottom",
+      legend.direction = "horizontal",
+      legend.box = "horizontal",
+      legend.key = element_blank()
+    )
+}
+```
+
+# Load Previous Results
+
+## Trees
+
+The trees estimated in [Chapter -@sec-decision-trees].
+
+```{r load-trees}
+files <- str_c(
+  "output/simul/dgp-ojeda/resul_trees_scenario_", 1:16, ".rda"
+)
+resul_trees <- map(files[file.exists(files)], ~{load(.x) ; resul_trees_scenario})
+```
+
+We can merge the metrics tables computed for each scenario and replications for these scenarios into a single tibble.
+
+```{r define-metrics_trees_all}
+metrics_trees_all <- map(
+  resul_trees,
+  function(resul_trees_sc) map(resul_trees_sc, "metrics_all") |> list_rbind()
+) |>
+  list_rbind() |>
+  mutate(
+    sample = factor(
+      sample,
+      levels = c("train", "valid", "test"),
+      labels = c("Train", "Validation", "Test")
+    )
+  )
+```
+
+
+```{r, echo=FALSE}
+metrics_trees_all <- 
+  metrics_trees_all |> filter(prune == FALSE, type == "regression")
+```
+
+We extract the metrics from the trees of interest:
+
+- `smallest`: tree with the smallest number of leaves
+- `largest`: tree with the highest number of leaves
+- `largest_auc`: tree with the highest AUC on validation set
+- `lowest_mse`: tree with the lowest MSE on validation set
+- `lowest_brier`: tree with the lowest Brier on validation set
+- `lowest_ici`: tree with the lowest ICI on validation set
+- `lowest_kl`: tree with the lowest KL Divergence on validation set
+
+
+```{r define-metrics_trees}
+#| code-fold: true
+#| code-summary: Code to identify trees of interest
+# Identify the smallest tree
+smallest_tree <-
+  metrics_trees_all |>
+  filter(sample == "Validation") |>
+  group_by(scenario, repn) |>
+  arrange(nb_leaves) |>
+  slice_head(n = 1) |>
+  select(scenario, repn, ind, nb_leaves) |>
+  mutate(result_type = "smallest") |>
+  ungroup()
+
+# Identify the largest tree
+largest_tree <-
+  metrics_trees_all |>
+  filter(sample == "Test") |>
+  group_by(scenario, repn) |> 
+  arrange(desc(nb_leaves)) |>
+  slice_head(n = 1) |>
+  select(scenario, repn, ind, nb_leaves) |>
+  mutate(result_type = "largest") |> 
+  ungroup()
+
+# Identify tree with highest AUC on test set
+highest_auc_tree <-
+  metrics_trees_all |>
+  filter(sample == "Validation") |>
+  group_by(scenario, repn) |>
+  arrange(desc(AUC)) |>
+  slice_head(n = 1) |>
+  select(scenario, repn, ind, nb_leaves) |>
+  mutate(result_type = "largest_auc") |>
+  ungroup()
+
+# Identify tree with lowest MSE
+lowest_mse_tree <-
+  metrics_trees_all |>
+  filter(sample == "Validation") |>
+  group_by(scenario, repn) |>
+  arrange(mse) |>
+  slice_head(n = 1) |>
+  select(scenario, repn, ind, nb_leaves) |>
+  mutate(result_type = "lowest_mse") |>
+  ungroup()
+
+# Identify tree with lowest ICI
+lowest_ici_tree <-
+  metrics_trees_all |>
+  filter(sample == "Validation") |>
+  group_by(scenario, repn) |>
+  arrange(ici) |>
+  slice_head(n = 1) |>
+  select(scenario, repn, ind, nb_leaves) |>
+  mutate(result_type = "lowest_ici") |>
+  ungroup()
+
+# Identify tree with lowest Brier's score
+lowest_brier_tree <-
+  metrics_trees_all |>
+  filter(sample == "Validation") |>
+  group_by(scenario, repn) |>
+  arrange(brier) |>
+  slice_head(n = 1) |>
+  select(scenario, repn, ind, nb_leaves) |>
+  mutate(result_type = "lowest_brier") |>
+  ungroup()
+
+# Identify tree with lowest KL
+lowest_kl_tree <-
+  metrics_trees_all |>
+  filter(sample == "Validation") |>
+  group_by(scenario, repn) |>
+  arrange(KL_20_true_probas) |>
+  slice_head(n = 1) |>
+  select(scenario, repn, ind, nb_leaves) |>
+  mutate(result_type = "lowest_kl") |>
+  ungroup()
+
+
+# Merge these
+trees_of_interest_tree <-
+  smallest_tree |>
+  bind_rows(largest_tree) |>
+  bind_rows(highest_auc_tree) |>
+  bind_rows(lowest_mse_tree) |>
+  bind_rows(lowest_ici_tree) |>
+  bind_rows(lowest_brier_tree) |>
+  bind_rows(lowest_kl_tree)
+
+# Add metrics now
+trees_of_interest_metrics_tree <-
+  trees_of_interest_tree |>
+  left_join(
+    metrics_trees_all, 
+    by = c("scenario", "repn", "ind", "nb_leaves"),
+    relationship = "many-to-many" # (train, valid, test)
+  ) |> 
+  mutate(
+    result_type = factor(
+      result_type,
+      levels = c(
+        "smallest", "largest", "lowest_mse", "largest_auc",
+        "lowest_brier", "lowest_ici", "lowest_kl"),
+      labels = c(
+        "Smallest", "Largest", "MSE*", "AUC*", 
+        "Brier*", "ICI*", "KL*"
+      )
+    )
+  )
+
+# Sanity check
+# trees_of_interest_metrics_tree |> count(scenario, sample, result_type)
+```
+
+
+We ran 100 replications of the simulations for each scenario. Let us compute the average AUC, ICI and KL Divergence over these 100 replications, both on the train and on the validation set.
+
+```{r}
+models_interest_trees <- 
+  trees_of_interest_metrics_tree |> 
+  group_by(scenario, sample, result_type) |> 
+  summarise(
+    AUC_lower = quantile(AUC, probs = 2.5/100),
+    AUC_upper = quantile(AUC, probs = 97.5/100),
+    AUC_sd = sd(AUC),
+    AUC = mean(AUC),
+    brier_lower = quantile(brier, probs = 2.5/100),
+    brier_upper = quantile(brier, probs = 97.5/100),
+    brier_sd = sd(brier),
+    brier = mean(brier),
+    ici_lower = quantile(ici, probs = 2.5/100),
+    ici_upper = quantile(ici, probs = 97.5/100),
+    ici_sd = sd(ici),
+    ici = mean(ici),
+    KL_20_true_probas_lower = quantile(KL_20_true_probas, probs = 2.5/100),
+    KL_20_true_probas_upper = quantile(KL_20_true_probas, probs = 97.5/100),
+    KL_20_true_probas_sd = sd(KL_20_true_probas),
+    KL_20_true_probas = mean(KL_20_true_probas),
+    quant_ratio_sd = sd(inter_quantile_10_90),
+    quant_ratio = mean(inter_quantile_10_90),
+    .groups = "drop"
+  ) |> 
+  mutate(model = "tree")
+```
+
+## Random Forests
+
+We load the estimated random forests from [Chapter -@sec-random-forests].
+```{r load-rf}
+files <- str_c(
+  "output/simul/dgp-ojeda/resul_rf_scenario_", 1:16, ".rda"
+)
+resul_rf <- map(files[file.exists(files)], ~{load(.x) ; resul_rf_scenario})
+```
+
+
+Let us merge in a single tibble the metrics computed over the replications of the scenarios.
+```{r define-metrics_rf}
+metrics_rf_all <- map(
+  resul_rf,
+  function(resul_rf_sc) map(resul_rf_sc, "metrics_all") |> list_rbind()
+) |>
+  list_rbind() |>
+  mutate(
+    sample = factor(
+      sample,
+      levels = c("train", "test", "valid"),
+      labels = c("Train", "Test", "Validation")
+    )
+  )
+```
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+metrics_rf_all <- metrics_rf_all |> 
+  ungroup() |> 
+  filter(type == "regression") |> 
+  select(-type)
+```
+
+We extract the metrics from the trees of interest:
+
+- `smallest`: forest with the smallest average number of leaves in the trees
+- `largest`: forest with the highest average number of leaves in the trees
+- `largest_auc`: forest with the highest AUC on validation set
+- `lowest_mse`: forest with the lowest MSE on validation set
+- `lowest_ici`: forest with the lowest ICI on validation set
+- `lowest_brier`: forest with the lowest Brier score on validation set
+- `lowest_kl`: forest with the lowest KL Divergence on validation set
+
+
+```{r rf-identify-trees-of-interest}
+#| code-fold: true
+# Identify the model with the smallest number of leaves on average on
+# validation set
+smallest_rf <-
+  metrics_rf_all |>
+  filter(sample == "Validation") |>
+  group_by(scenario, repn) |>
+  arrange(nb_leaves) |>
+  slice_head(n = 1) |>
+  select(scenario, repn, ind, nb_leaves) |>
+  mutate(result_type = "smallest") |>
+  ungroup()
+
+# Identify the largest tree
+largest_rf <-
+  metrics_rf_all |>
+  filter(sample == "Validation") |>
+  group_by(scenario, repn) |>
+  arrange(desc(nb_leaves)) |>
+  slice_head(n = 1) |>
+  select(scenario, repn, ind, nb_leaves) |>
+  mutate(result_type = "largest") |>
+  ungroup()
+
+# Identify tree with highest AUC on test set
+highest_auc_rf <-
+  metrics_rf_all |>
+  filter(sample == "Validation") |>
+  group_by(scenario, repn) |>
+  arrange(desc(AUC)) |>
+  slice_head(n = 1) |>
+  select(scenario, repn, ind, nb_leaves) |>
+  mutate(result_type = "largest_auc") |>
+  ungroup()
+
+# Identify tree with lowest MSE
+lowest_mse_rf <-
+  metrics_rf_all |>
+  filter(sample == "Validation") |>
+  group_by(scenario, repn) |>
+  arrange(mse) |>
+  slice_head(n = 1) |>
+  select(scenario, repn, ind, nb_leaves) |>
+  mutate(result_type = "lowest_mse") |>
+  ungroup()
+
+# Identify tree with lowest Brier
+lowest_brier_rf <-
+  metrics_rf_all |>
+  filter(sample == "Validation") |>
+  group_by(scenario, repn) |>
+  arrange(brier) |>
+  slice_head(n = 1) |>
+  select(scenario, repn, ind, nb_leaves) |>
+  mutate(result_type = "lowest_brier") |>
+  ungroup()
+
+# Identify tree with lowest ICI
+lowest_ici_rf <-
+  metrics_rf_all |>
+  filter(sample == "Validation") |>
+  group_by(scenario, repn) |>
+  arrange(ici) |>
+  slice_head(n = 1) |>
+  select(scenario, repn, ind, nb_leaves) |>
+  mutate(result_type = "lowest_ici") |>
+  ungroup()
+
+# Identify tree with lowest KL
+lowest_kl_rf <-
+  metrics_rf_all |>
+  filter(sample == "Validation") |>
+  group_by(scenario, repn) |>
+  arrange(KL_20_true_probas) |>
+  slice_head(n = 1) |>
+  select(scenario, repn, ind, nb_leaves) |>
+  mutate(result_type = "lowest_kl") |>
+  ungroup()
+
+# Merge these
+rf_of_interest <-
+  smallest_rf |>
+  bind_rows(largest_rf) |>
+  bind_rows(highest_auc_rf) |>
+  bind_rows(lowest_mse_rf) |>
+  bind_rows(lowest_brier_rf) |>
+  bind_rows(lowest_ici_rf) |>
+  bind_rows(lowest_kl_rf)
+
+# Add metrics now
+rf_of_interest <-
+  rf_of_interest |>
+  left_join(
+    metrics_rf_all,
+    by = c("scenario", "repn", "ind", "nb_leaves"),
+    relationship = "many-to-many" # (train, valid, test)
+  ) |>
+  mutate(
+    result_type = factor(
+      result_type,
+      levels = c(
+        "smallest", "largest", "lowest_mse", "largest_auc",
+        "lowest_brier", "lowest_ici", "lowest_kl"),
+      labels = c(
+        "Smallest", "Largest", "MSE*", "AUC*",
+        "Brier*", "ICI*", "KL*"
+      )
+    )
+  )
+
+# Sanity check
+# trees_of_interest_metrics_rf |> count(scenario, sample, result_type)
+```
+
+
+We ran 100 replications of the simulations for each scenario and each set of hyperparameters. Let us compute the average AUC, ICI and KL Divergence over these replications, both on the train and on the validation set.
+
+```{r define-models_interest_rf}
+models_interest_rf <- rf_of_interest |> 
+  group_by(scenario, sample, result_type) |> 
+  summarise(
+    AUC_lower = quantile(AUC, probs = 2.5/100),
+    AUC_upper = quantile(AUC, probs = 97.5/100),
+    AUC_sd = sd(AUC),
+    AUC = mean(AUC),
+    brier_lower = quantile(brier, probs = 2.5/100),
+    brier_upper = quantile(brier, probs = 97.5/100),
+    brier_sd = sd(brier),
+    brier = mean(brier),
+    ici_lower = quantile(ici, probs = 2.5/100),
+    ici_upper = quantile(ici, probs = 97.5/100),
+    ici_sd = sd(ici),
+    ici = mean(ici),
+    KL_20_true_probas_lower = quantile(KL_20_true_probas, probs = 2.5/100),
+    KL_20_true_probas_upper = quantile(KL_20_true_probas, probs = 97.5/100),
+    KL_20_true_probas_sd = sd(KL_20_true_probas),
+    KL_20_true_probas = mean(KL_20_true_probas),
+    quant_ratio_sd = sd(inter_quantile_10_90),
+    quant_ratio = mean(inter_quantile_10_90),
+    .groups = "drop"
+  ) |> 
+  mutate(model = "rf")
+```
+
+## Extreme Gradient Boosting
+
+```{r}
+scenarios <- 1:16
+```
+
+Let us load the estimated models from [Chapter -@sec-simul-sgb].
+```{r}
+files <- str_c(
+  "output/simul/dgp-ojeda/resul_xgb_scenario_", scenarios, ".rda"
+)
+resul_xgb <- map(files[file.exists(files)], ~{load(.x) ; resul_xgb_scenario})
+```
+
+Let us merge in a single tibble the metrics computed over the replications of the scenarios.
+
+```{r}
+metrics_xgb_all <- map(
+  resul_xgb,
+  function(resul_xgb_sc) map(resul_xgb_sc, "metrics_simul") |> list_rbind()
+) |>
+  list_rbind() |>
+  mutate(
+    sample = factor(
+      sample,
+      levels = c("train", "valid", "test"),
+      labels = c("Train","Validation" ,"Test")
+    )
+  )
+```
+
+For each replication, we made some hyperparameters vary. Let us identify some models of interest:
+
+- `smallest`: model with the lowest number of boosting iteration
+- `largest`: model with the highest number of boosting iteration
+- `largest_auc`: model with the highest AUC on validation set
+- `lowest_mse`: model with the lowest MSE on validation set
+- `lowest_brier`: model with the lowest Brier score on validation set
+- `lowest_ici`: model with the lowest ICI on validation set
+- `lowest_kl`: model with the lowest KL Divergence on validation set
+
+```{r xgb-identify-trees-of-interest}
+#| code-fold: true
+# Identify the model with the smallest number of boosting iterations
+smallest_xgb <-
+  metrics_xgb_all |>
+  filter(sample == "Validation") |>
+  group_by(scenario, repn) |>
+  arrange(nb_iter) |>
+  slice_head(n = 1) |>
+  select(scenario, repn, ind, nb_iter) |>
+  mutate(result_type = "smallest") |>
+  ungroup()
+
+# Identify the largest tree
+largest_xgb <-
+  metrics_xgb_all |>
+  filter(sample == "Validation") |>
+  group_by(scenario, repn) |>
+  arrange(desc(nb_iter)) |>
+  slice_head(n = 1) |>
+  select(scenario, repn, ind, nb_iter) |>
+  mutate(result_type = "largest") |>
+  ungroup()
+
+# Identify tree with highest AUC on test set
+highest_auc_xgb <-
+  metrics_xgb_all |>
+  filter(sample == "Validation") |>
+  group_by(scenario, repn) |>
+  arrange(desc(AUC)) |>
+  slice_head(n = 1) |>
+  select(scenario, repn, ind, nb_iter) |>
+  mutate(result_type = "largest_auc") |>
+  ungroup()
+
+# Identify tree with lowest MSE
+lowest_mse_xgb <-
+  metrics_xgb_all |>
+  filter(sample == "Validation") |>
+  group_by(scenario, repn) |>
+  arrange(mse) |>
+  slice_head(n = 1) |>
+  select(scenario, repn, ind, nb_iter) |>
+  mutate(result_type = "lowest_mse") |>
+  ungroup()
+
+# Identify tree with lowest brier
+lowest_brier_xgb <-
+  metrics_xgb_all |>
+  filter(sample == "Validation") |>
+  group_by(scenario, repn) |>
+  arrange(brier) |>
+  slice_head(n = 1) |>
+  select(scenario, repn, ind, nb_iter) |>
+  mutate(result_type = "lowest_brier") |>
+  ungroup()
+
+# Identify tree with lowest ICI
+lowest_ici_xgb <-
+  metrics_xgb_all |>
+  filter(sample == "Validation") |>
+  group_by(scenario, repn) |>
+  arrange(ici) |>
+  slice_head(n = 1) |>
+  select(scenario, repn, ind, nb_iter) |>
+  mutate(result_type = "lowest_ici") |>
+  ungroup()
+
+# Identify tree with lowest KL
+lowest_kl_xgb <-
+  metrics_xgb_all |>
+  filter(sample == "Validation") |>
+  group_by(scenario, repn) |>
+  arrange(KL_20_true_probas) |>
+  slice_head(n = 1) |>
+  select(scenario, repn, ind, nb_iter) |>
+  mutate(result_type = "lowest_kl") |>
+  ungroup()
+
+# Merge these
+models_of_interest_xgb <-
+  smallest_xgb |>
+  bind_rows(largest_xgb) |>
+  bind_rows(highest_auc_xgb) |>
+  bind_rows(lowest_mse_xgb) |>
+  bind_rows(lowest_brier_xgb) |>
+  bind_rows(lowest_ici_xgb) |>
+  bind_rows(lowest_kl_xgb)
+
+# Add metrics now
+models_of_interest_metrics <-
+  models_of_interest_xgb |>
+  left_join(
+    metrics_xgb_all,
+    by = c("scenario", "repn", "ind", "nb_iter"),
+    relationship = "many-to-many" # (train, valid, test)
+  ) |> 
+  mutate(
+    result_type = factor(
+      result_type,
+      levels = c(
+        "smallest", "largest", "lowest_mse", "largest_auc",
+        "lowest_brier", "lowest_ici", "lowest_kl"),
+      labels = c(
+        "Smallest", "Largest", "MSE*", "AUC*", 
+        "Brier*", "ICI*", "KL*"
+      )
+    )
+  )
+
+# Sanity check
+# models_of_interest_metrics |> count(scenario, sample, result_type)
+```
+
+Then, we compute the average values of the AUC, the ICI and the KL divergence for these models of interest over the 100 replications, for each scenario, both on the train and the validation set.
+
+```{r define-models_interest_xgb}
+models_interest_xgb <- models_of_interest_metrics |> 
+  group_by(scenario, sample, result_type) |> 
+  summarise(
+    AUC_lower = quantile(AUC, probs = 2.5/100),
+    AUC_upper = quantile(AUC, probs = 97.5/100),
+    AUC_sd = sd(AUC),
+    AUC = mean(AUC),
+    brier_lower = quantile(brier, probs = 2.5/100),
+    brier_upper = quantile(brier, probs = 97.5/100),
+    brier_sd = sd(brier),
+    brier = mean(brier),
+    ici_lower = quantile(ici, probs = 2.5/100),
+    ici_upper = quantile(ici, probs = 97.5/100),
+    ici_sd = sd(ici),
+    ici = mean(ici),
+    KL_20_true_probas_lower = quantile(KL_20_true_probas, probs = 2.5/100),
+    KL_20_true_probas_upper = quantile(KL_20_true_probas, probs = 97.5/100),
+    KL_20_true_probas_sd = sd(KL_20_true_probas),
+    KL_20_true_probas = mean(KL_20_true_probas),
+    quant_ratio_sd = sd(inter_quantile_10_90),
+    quant_ratio = mean(inter_quantile_10_90),
+    .groups = "drop"
+  ) |> 
+  mutate(
+    model = "xgb",
+    sample = str_to_lower(as.character(sample))
+  )
+
+# Sanity check
+# metrics_xgb_all |> count(scenario, ind, sample, nb_iter) |>
+#   filter(n != max(repns_vector))
+```
+
+
+## Generalized Linear Models
+
+Let us load the results from [Chapter -@sec-simul-glm].
+```{r load-results-glm}
+files <- str_c(
+  "output/simul/dgp-ojeda/resul_glm_scenario_", 1:16, ".rda"
+)
+resul_glm <- map(files[file.exists(files)], ~{load(.x) ; resul_glm_scenario})
+```
+
+
+We extract the computed metrics:
+```{r define-metrics_glm_all}
+metrics_glm_all <- map(
+  resul_glm,
+  function(resul_glm_sc) map(resul_glm_sc, "metrics") |> list_rbind()
+) |>
+  list_rbind() |>
+  mutate(
+    sample = factor(
+      sample,
+      levels = c("train", "test"), labels = c("Train", "Test")
+    )
+  )
+```
+
+Then, for each scenario, we compute the average of the AUC, the ICI and the KL divergence over the 100 replications.
+
+```{r}
+models_interest_glm <- 
+  metrics_glm_all |> 
+  group_by(scenario, sample) |> 
+  summarise(
+    AUC_lower = quantile(AUC, probs = 2.5/100),
+    AUC_upper = quantile(AUC, probs = 97.5/100),
+    AUC_sd = sd(AUC),
+    AUC = mean(AUC),
+    brier_lower = quantile(brier, probs = 2.5/100),
+    brier_upper = quantile(brier, probs = 97.5/100),
+    brier_sd = sd(brier),
+    brier = mean(brier),
+    ici_lower = quantile(ici, probs = 2.5/100),
+    ici_upper = quantile(ici, probs = 97.5/100),
+    ici_sd = sd(ici),
+    ici = mean(ici),
+    KL_20_true_probas_lower = quantile(KL_20_true_probas, probs = 2.5/100),
+    KL_20_true_probas_upper = quantile(KL_20_true_probas, probs = 97.5/100),
+    KL_20_true_probas_sd = sd(KL_20_true_probas),
+    KL_20_true_probas = mean(KL_20_true_probas),
+    quant_ratio_sd = sd(inter_quantile_10_90),
+    quant_ratio = mean(inter_quantile_10_90),
+    .groups = "drop"
+  ) |> 
+  mutate(
+    model = "glm",
+    sample = str_to_lower(as.character(sample))
+  ) |> 
+  mutate(result_type = "None")
+```
+
+
+## Generalized Additive Models
+
+
+Let us load the results from [Chapter -@sec-simul-gam].
+```{r load-results-gam}
+files <- str_c(
+  "output/simul/dgp-ojeda/resul_gam_scenario_", 1:16, ".rda"
+)
+resul_gam <- map(files[file.exists(files)], ~{load(.x) ; resul_gam_scenario})
+```
+
+
+We extract the computed metrics:
+```{r define-metrics_gam_all}
+metrics_gam_all <- map(
+  resul_gam,
+  function(resul_gam_sc) map(resul_gam_sc, "metrics") |> list_rbind()
+) |>
+  list_rbind() |>
+  mutate(
+    sample = factor(
+      sample,
+      levels = c("train", "test"), labels = c("Train", "Test")
+    )
+  )
+```
+
+Then, for each scenario, we compute the average of the AUC, the ICI and the KL divergence over the 100 replications.
+
+```{r define-models_interest_gam}
+models_interest_gam <- 
+  metrics_gam_all |> 
+  group_by(scenario, sample) |> 
+  summarise(
+    AUC_lower = quantile(AUC, probs = 2.5/100),
+    AUC_upper = quantile(AUC, probs = 97.5/100),
+    AUC_sd = sd(AUC),
+    AUC = mean(AUC),
+    brier_lower = quantile(brier, probs = 2.5/100),
+    brier_upper = quantile(brier, probs = 97.5/100),
+    brier_sd = sd(brier),
+    brier = mean(brier),
+    ici_lower = quantile(ici, probs = 2.5/100),
+    ici_upper = quantile(ici, probs = 97.5/100),
+    ici_sd = sd(ici),
+    ici = mean(ici),
+    KL_20_true_probas_lower = quantile(KL_20_true_probas, probs = 2.5/100),
+    KL_20_true_probas_upper = quantile(KL_20_true_probas, probs = 97.5/100),
+    KL_20_true_probas_sd = sd(KL_20_true_probas),
+    KL_20_true_probas = mean(KL_20_true_probas),
+    quant_ratio_sd = sd(inter_quantile_10_90),
+    quant_ratio = mean(inter_quantile_10_90),
+    .groups = "drop"
+  ) |> 
+  mutate(
+    model = "gam",
+    sample = str_to_lower(as.character(sample))
+  ) |> 
+  mutate(result_type = "None")
+```
+
+
+## Generalized Additive Models Selection
+
+Let us load the results from [Chapter -@sec-simul-gamsel].
+```{r load-results-gamsel}
+files <- str_c(
+  "output/simul/dgp-ojeda/resul_gamsel_scenario_", 1:16, ".rda"
+)
+resul_gamsel <- map(files[file.exists(files)], ~{load(.x) ; resul_gamsel_scenario})
+```
+
+
+We extract the computed metrics:
+```{r define-metrics_gamsel_all}
+metrics_gamsel_all <- map(
+  resul_gamsel,
+  function(resul_gamsel_sc) map(resul_gamsel_sc, "metrics") |> list_rbind()
+) |>
+  list_rbind() |>
+  mutate(
+    sample = factor(
+      sample,
+      levels = c("train", "test"), labels = c("Train", "Test")
+    )
+  )
+```
+
+Then, for each scenario, we compute the average of the AUC, the ICI and the KL divergence over the 100 replications.
+
+```{r define-models_interest_gamsel}
+models_interest_gamsel <- 
+  metrics_gamsel_all |> 
+  group_by(scenario, sample) |> 
+  summarise(
+    AUC_lower = quantile(AUC, probs = 2.5/100),
+    AUC_upper = quantile(AUC, probs = 97.5/100),
+    AUC_sd = sd(AUC),
+    AUC = mean(AUC),
+    brier_lower = quantile(brier, probs = 2.5/100),
+    brier_upper = quantile(brier, probs = 97.5/100),
+    brier_sd = sd(brier),
+    brier = mean(brier),
+    ici_lower = quantile(ici, probs = 2.5/100),
+    ici_upper = quantile(ici, probs = 97.5/100),
+    ici_sd = sd(ici),
+    ici = mean(ici),
+    KL_20_true_probas_lower = quantile(KL_20_true_probas, probs = 2.5/100),
+    KL_20_true_probas_upper = quantile(KL_20_true_probas, probs = 97.5/100),
+    KL_20_true_probas_sd = sd(KL_20_true_probas),
+    KL_20_true_probas = mean(KL_20_true_probas),
+    quant_ratio_sd = sd(inter_quantile_10_90),
+    quant_ratio = mean(inter_quantile_10_90),
+    .groups = "drop"
+  ) |> 
+  mutate(
+    model = "gamsel",
+    sample = str_to_lower(as.character(sample))
+  ) |> 
+  mutate(result_type = "None")
+```
+
+
+# Comparison of Models
+
+Let us merge all these tibbles into a single one.
+
+```{r define-models_interest}
+models_interest <- models_interest_trees |> 
+  filter(sample %in% c("Train", "Test")) |> 
+  mutate(
+    sample = fct_recode(sample, "train" = "Train", "test" = "Test")
+  ) |> 
+  bind_rows(
+    models_interest_rf |> 
+      filter(sample %in% c("Train", "Test")) |> 
+      mutate(
+        sample = fct_recode(sample, "train" = "Train", "test" = "Test")
+      )
+  ) |> 
+  bind_rows(models_interest_xgb |> filter(sample %in% c("train", "test"))) |> 
+  bind_rows(models_interest_glm) |> 
+  bind_rows(models_interest_gam) |> 
+  bind_rows(models_interest_gamsel) |> 
+  mutate(
+    sample = factor(
+      sample,
+      levels = c("train", "test"), 
+      labels = c("Train", "Test")
+    ),
+    model = factor(
+      model,
+      levels = c("tree", "rf", "xgb", "glm", "gam", "gamsel"),
+      labels = c("Trees", "Random Forests", "XGB", "GLM", "GAM", "GAMSEL")
+    )
+  ) |> 
+  # filter(result_type != "lowest_mse") |> 
+  mutate(
+    result_type = factor(
+      result_type,
+      levels = c(
+        "Smallest", "Largest", "MSE*",
+        "AUC*", "Brier*",
+        "ICI*", "KL*", "None"),
+      labels = c(
+        "Smallest", "Largest", "MSE*",
+        "AUC*", "Brier*",
+        "ICI*", "KL*", "None")
+    )
+  )
+```
+
+
+We define a function, `plot_comparison()`{.R} to plot the results. The left panel of the figure shows values computed on the train set, whereas the right panel shows values computed on the validation set. The shape of the dots represent the average of the metric computed over the 100 replications for the model of interest (smallest, largest, AUC\*, MSE\*, ICI\*, KL*). The color of the points allows to identify the models of interest. Lastly, the vertical and horizontal segments show the 95% intervals computed over the 100 replications for the models of interest.
+
+```{r define-plot_comparison}
+#| code-fold: true
+plot_comparison <- function(scenario, calib_metric) {
+  df_plot <- models_interest |> filter(scenario == !!scenario)
+  model_shapes <- c(
+    "Trees" = 1,
+    "Random Forests" = 2,
+    "XGB" = 4,
+    "GLM" = 5,
+    "GAM" = 6,
+    "GAMSEL" = 7
+  )
+  model_shapes <- model_shapes[names(model_shapes) %in% df_plot$model]
+  
+  ggplot(
+    data = df_plot,
+    mapping = aes(
+      colour = result_type,
+      shape = model
+    )
+  ) +
+    geom_segment(
+      mapping = aes(
+        x = !!sym(str_c(calib_metric, "_lower")),
+        y = KL_20_true_probas,
+        xend = !!sym(str_c(calib_metric, "_upper")),
+        yend = KL_20_true_probas
+      ),
+      linetype = "solid",
+      linewidth = .5
+    ) +
+    geom_segment(
+      mapping = aes(
+        x = !!sym(calib_metric), 
+        y = KL_20_true_probas_lower,
+        xend = !!sym(calib_metric), 
+        yend = KL_20_true_probas_upper
+      ),
+      linetype = "solid",
+      linewidth = .5
+    ) +
+    geom_point(
+      mapping = aes(x = !!sym(calib_metric), y = KL_20_true_probas),
+      size = 4
+    ) +
+    labs(
+      x = str_c("Calibration (", ifelse(calib_metric == "ici", "ICI", "Brier"), ")"), 
+      y = "KL Divergence"
+    ) +
+    scale_colour_manual("Type", values = colour_result_type) +
+    scale_shape_manual(
+      "Model", values = c(model_shapes)) +
+    facet_wrap(~sample) +
+    theme_paper() +
+    scale_x_log10() +
+    scale_y_log10() +
+    guides(colour=guide_legend(ncol = 3))
+}
+```
+
+
+:::{.panel-tabset}
+
+```{r tb-labs-metrics-comparison-simul, echo = FALSE}
+tb_labs <- expand_grid(
+  calib_metric = c("brier", "ici"),
+  scenario = 1:16
+) |> 
+  mutate(
+      dgp = case_when(
+        scenario %in% 1:4 ~ 1,
+        scenario %in% 5:8 ~ 2,
+        scenario %in% 9:12 ~ 3,
+        scenario %in% 13:16 ~ 4
+      ),
+      no_noise = c(0, 10, 50, 100)[(scenario-1)%%4 + 1],
+      no_noise = factor(no_noise, levels = c(no_noise), labels = str_c(no_noise, " noise variables"))
+    ) |> 
+  mutate(
+    label = str_c("Comparison of models (DGP ", dgp, ", ", no_noise, ")")
+  ) |> 
+  mutate(i_row = row_number())
+
+plot_comparison_graphs_config <- function(i_values) {
+  res <- purrr::map_chr(i_values, \(i) {
+    knitr::knit_child(
+      input = "children-dir/comparison-models-simul.qmd", 
+      envir = environment(), 
+      quiet = TRUE
+    )
+  })
+  
+  cat(res, sep = '\n')
+}
+```
+
+## Brier Score
+
+::::{.panel-tabset}
+
+### DGP 1
+:::::{.panel-tabset}
+```{r plots-metrics-comparison-simul-brier-1}
+#| output: asis
+#| echo: false
+i_val <- tb_labs |> 
+  filter(dgp == 1, calib_metric == "brier") |> 
+  pull(i_row)
+plot_comparison_graphs_config(i_val)
+```
+:::::
+
+### DGP 2
+:::::{.panel-tabset}
+```{r plots-metrics-comparison-simul-brier-2}
+#| output: asis
+#| echo: false
+i_val <- tb_labs |> 
+  filter(dgp == 2, calib_metric == "brier") |> 
+  pull(i_row)
+plot_comparison_graphs_config(i_val)
+```
+:::::
+
+### DGP 3
+:::::{.panel-tabset}
+```{r plots-metrics-comparison-simul-brier-3}
+#| output: asis
+#| echo: false
+i_val <- tb_labs |> 
+  filter(dgp == 3, calib_metric == "brier") |> 
+  pull(i_row)
+plot_comparison_graphs_config(i_val)
+```
+:::::
+
+### DGP 4
+:::::{.panel-tabset}
+```{r plots-metrics-comparison-simul-brier-4}
+#| output: asis
+#| echo: false
+i_val <- tb_labs |> 
+  filter(dgp == 4, calib_metric == "brier") |> 
+  pull(i_row)
+plot_comparison_graphs_config(i_val)
+```
+:::::
+
+::::
+
+
+## ICI
+
+::::{.panel-tabset}
+
+### DGP 1
+:::::{.panel-tabset}
+```{r plots-metrics-comparison-simul-ici-1}
+#| output: asis
+#| echo: false
+i_val <- tb_labs |> 
+  filter(dgp == 1, calib_metric == "ici") |> 
+  pull(i_row)
+plot_comparison_graphs_config(i_val)
+```
+:::::
+
+### DGP 2
+:::::{.panel-tabset}
+```{r plots-metrics-comparison-simul-ici-2}
+#| output: asis
+#| echo: false
+i_val <- tb_labs |> 
+  filter(dgp == 2, calib_metric == "ici") |> 
+  pull(i_row)
+plot_comparison_graphs_config(i_val)
+```
+:::::
+
+### DGP 3
+:::::{.panel-tabset}
+```{r plots-metrics-comparison-simul-ici-3}
+#| output: asis
+#| echo: false
+i_val <- tb_labs |> 
+  filter(dgp == 3, calib_metric == "ici") |> 
+  pull(i_row)
+plot_comparison_graphs_config(i_val)
+```
+:::::
+
+### DGP 4
+:::::{.panel-tabset}
+```{r plots-metrics-comparison-simul-ici-4}
+#| output: asis
+#| echo: false
+i_val <- tb_labs |> 
+  filter(dgp == 4, calib_metric == "ici") |> 
+  pull(i_row)
+plot_comparison_graphs_config(i_val)
+```
+:::::
+
+::::
+
+:::
+
+
+
+## Tables
+
+We also visualize the results in tables. For each model within a given scenario, we report the average AUC, Brier Score, ICI, and KL divergence over 100 replications for the 'best' model. For ensemble tree models, the 'best' model is identified either when maximizing the AUC (denoted $AUC^*$), when minimizing the Brier Score (denoted $Brier^*$), the ICI (denoted $ICI^*$), or the KL divergence (denoted $KL^*$). When the best model is selected based anything but the AUC, we compute the variation in the metric as the difference between the metric obtained when minimizing either the Brier score, the ICI, or the KL divergence and the metric obtained when maximizing AUC. Thus, negative values indicate a decrease in the metric compared to when the best model is selected by optimizing AUC. For general linear models, the only metrics reported are the AUC, Brier, ICI, and KL divergence.
+
+```{r}
+#| code-fold: true
+#| code-summary: Display the codes to create the summary table.
+table_models_interest_mean <- 
+  models_interest |> 
+  filter(sample == "Test") |> 
+  select(
+    scenario, sample, model, result_type, 
+    AUC, brier, ici, kl = KL_20_true_probas, quant_ratio
+  ) |> 
+  filter(
+    result_type %in% c("AUC*", "Brier*", "ICI*", "KL*", "None")
+  ) |> 
+  mutate(result_type = fct_recode(result_type, "KL*" = "None")) |> 
+  mutate(value_type = "mean")
+
+table_models_interest_sd <- 
+  models_interest |> 
+  filter(sample == "Test") |> 
+  select(
+    scenario, sample, model, result_type, 
+    AUC = AUC_sd, brier = brier_sd, ici = ici_sd, kl = KL_20_true_probas_sd, quant_ratio = quant_ratio_sd
+  ) |> 
+  filter(
+    result_type %in% c("AUC*", "Brier*", "ICI*", "KL*", "None")
+  ) |> 
+  mutate(result_type = fct_recode(result_type, "KL*" = "None")) |> 
+  mutate(value_type = "sd")
+
+
+red_colours <- c(
+  "#FFD6D6", "#FFCCCC", "#FFC2C2", "#FFB8B8", "#FFADAD", 
+  "#FFA3A3", "#FF9999", "#FF8F8F", "#FF8585", "#FF7A7A"
+)
+red_colours_txt <- c(
+  "#333333", "#333333", "#2B2B2B", "#2B2B2B", "#232323", 
+  "#1F1F1F", "#1A1A1A", "#141414", "#101010", "#0A0A0A"
+)
+green_colours <- c(
+  "#E9F6E9", "#D4F2D4", "#BFEFBF", "#AADCA9", "#96C996",
+  "#81B781", "#6CA56C", "#578252", "#426F42", "#2F5D2F"
+)
+green_colours_txt <- c(
+  "#1A1A1A", "#1A1A1A", "#1A1A1A", "#1A1A1A", "#1A1A1A",
+  "#E6E6E6", "#E6E6E6", "#E6E6E6", "#E6E6E6", "#E6E6E6"
+)
+
+accuracy_digits <- 0.01
+
+table_kb <- 
+  table_models_interest_mean |> 
+  bind_rows(table_models_interest_sd) |> 
+  pivot_wider(
+    names_from = "result_type", 
+    values_from = c("AUC", "brier", "ici", "kl", "quant_ratio")
+  ) |> 
+  mutate(
+    value_type = factor(value_type, levels = c("mean", "sd")),
+    scenario = factor(scenario)
+  ) |> 
+  select(
+    scenario, model, value_type,
+    # # columns for GLM/GAM/GAMSEL
+    # AUC_None, ici_None, kl_None, 
+    # columns for ML models selected based on AUC
+    `AUC_AUC*`, `brier_AUC*`, `ici_AUC*`, `kl_AUC*`, `quant_ratio_AUC*`,
+    # columns for ML models selected based on Brier score
+    `AUC_Brier*`,  `brier_Brier*`, `ici_Brier*`, `kl_Brier*`, `quant_ratio_Brier*`,
+    # columns for ML models selected based on ICI
+    `AUC_ICI*`, `brier_ICI*`, `ici_ICI*`, `kl_ICI*`, `quant_ratio_ICI*`,
+    # columns for ML models selected based on KL dist
+    `AUC_KL*`, `brier_KL*`, `ici_KL*`, `kl_KL*`, `quant_ratio_KL*`
+  ) |> 
+  arrange(scenario, model, value_type) |> 
+  mutate(
+    # Difference in metrics computed when minnimizing Brier wrt when maximizing AUC
+    diff_AUC_Brier = `AUC_Brier*` - `AUC_AUC*`,
+    diff_brier_Brier = `brier_Brier*` - `brier_AUC*`,
+    diff_ICI_Brier = `ici_Brier*` - `ici_AUC*`,
+    diff_KL_Brier = `kl_Brier*` - `kl_AUC*`,
+    diff_quant_ratio_Brier = `quant_ratio_Brier*` - `quant_ratio_AUC*`,
+    # Difference in metrics computed when minnimizing ICI wrt when maximizing AUC
+    diff_AUC_ICI = `AUC_ICI*` - `AUC_AUC*`,
+    diff_brier_ICI = `brier_ICI*` - `brier_AUC*`,
+    diff_ICI_ICI = `ici_ICI*` - `ici_AUC*`,
+    diff_KL_ICI = `kl_ICI*` - `kl_AUC*`,
+    diff_quant_ratio_ICI = `quant_ratio_ICI*` - `quant_ratio_AUC*`,
+    # Difference in metrics computed when minnimizing KL wrt when maximizing AUC
+    diff_AUC_KL = `AUC_KL*` - `AUC_AUC*`,
+    diff_brier_KL = `brier_KL*` - `brier_AUC*`,
+    diff_ICI_KL = `ici_KL*` - `ici_AUC*`,
+    diff_KL_KL = `kl_KL*` - `kl_AUC*`,
+    diff_quant_ratio_KL = `quant_ratio_KL*` - `quant_ratio_AUC*`
+  ) |> 
+  ungroup()
+
+get_range_for_colours <- function(variable_name) {
+  value <- table_kb |> 
+    filter(value_type == "mean") |> 
+    pull(!!variable_name) |> 
+    range(na.rm = TRUE) |> abs() |> max()
+  value * c(-1, 1)
+}
+
+get_colour <- function(variable, value_type, min_or_max, colour_type) {
+  if (value_type == "mean") {
+    variable_string <- deparse(substitute(variable))
+    if (colour_type == "bg") {
+      # background colour
+      if (min_or_max == "min") {
+        colours <- rev(c(rev(red_colours), green_colours))
+      } else {
+        colours <- c(rev(red_colours), rev(green_colours))
+      }
+    } else {
+      # text colour
+      if (min_or_max == "min") {
+        colours <- rev(c(rev(red_colours_txt), green_colours_txt))
+      } else {
+        colours <- c(rev(red_colours_txt), rev(green_colours_txt))
+      }
+    }
+    res <- kableExtra::spec_color(
+      variable,
+      palette = colours,
+      scale_from = get_range_for_colours(variable_string),
+      na_color = "white"
+    )
+  } else {
+    res <- "white"
+  }
+  res
+}
+
+table_kb <- 
+  table_kb |> 
+  rowwise() |> 
+  mutate(
+    # Difference in metrics computed when minnimizing ICI wrt when maximizing AUC
+    diff_AUC_Brier_bgcol = get_colour(diff_AUC_Brier, value_type, "max", "bg"),
+    diff_AUC_Brier_txtcol = get_colour(diff_AUC_Brier, value_type, "max", "txt"),
+    diff_brier_Brier_bgcol = get_colour(diff_brier_Brier, value_type, "min", "bg"),
+    diff_brier_Brier_txtcol = get_colour(diff_brier_Brier, value_type, "min", "txt"),
+    diff_ICI_Brier_bgcol = get_colour(diff_ICI_Brier, value_type, "min", "bg"),
+    diff_ICI_Brier_txtcol = get_colour(diff_ICI_Brier, value_type, "min", "txt"),
+    diff_KL_Brier_bgcol = get_colour(diff_KL_Brier, value_type, "min", "bg"),
+    diff_KL_Brier_txtcol = get_colour(diff_KL_Brier, value_type, "min", "txt"),
+    diff_quant_ratio_Brier_bgcol = get_colour(diff_quant_ratio_Brier, value_type, "min", "bg"),
+    diff_quant_ratio_Brier_txtcol = get_colour(diff_quant_ratio_Brier, value_type, "min", "txt"),
+    # Difference in metrics computed when minnimizing ICI wrt when maximizing AUC
+    diff_AUC_ICI_bgcol = get_colour(diff_AUC_ICI, value_type, "max", "bg"),
+    diff_AUC_ICI_txtcol = get_colour(diff_AUC_ICI, value_type, "max", "txt"),
+    diff_brier_ICI_bgcol = get_colour(diff_brier_ICI, value_type, "min", "bg"),
+    diff_brier_ICI_txtcol = get_colour(diff_brier_ICI, value_type, "min", "txt"),
+    diff_ICI_ICI_bgcol = get_colour(diff_ICI_ICI, value_type, "min", "bg"),
+    diff_ICI_ICI_txtcol = get_colour(diff_ICI_ICI, value_type, "min", "txt"),
+    diff_KL_ICI_bgcol = get_colour(diff_KL_ICI, value_type, "min", "bg"),
+    diff_KL_ICI_txtcol = get_colour(diff_KL_ICI, value_type, "min", "txt"),
+    diff_quant_ratio_ICI_bgcol = get_colour(diff_quant_ratio_ICI, value_type, "min", "bg"),
+    diff_quant_ratio_ICI_txtcol = get_colour(diff_quant_ratio_ICI, value_type, "min", "txt"),
+    # Difference in metrics computed when minnimizing KL wrt when maximizing AUC
+    diff_AUC_KL_bgcol = get_colour(diff_AUC_KL, value_type, "max", "bg"),
+    diff_AUC_KL_txtcol = get_colour(diff_AUC_KL, value_type, "max", "txt"),
+    diff_brier_KL_bgcol = get_colour(diff_brier_KL, value_type, "min", "bg"),
+    diff_brier_KL_txtcol = get_colour(diff_brier_KL, value_type, "min", "txt"),
+    diff_ICI_KL_bgcol = get_colour(diff_ICI_KL, value_type, "min", "bg"),
+    diff_ICI_KL_txtcol = get_colour(diff_ICI_KL, value_type, "min", "txt"),
+    diff_KL_KL_bgcol = get_colour(diff_KL_KL, value_type, "min", "bg"),
+    diff_KL_KL_txtcol = get_colour(diff_KL_KL, value_type, "min", "txt"),
+    diff_quant_ratio_KL_bgcol = get_colour(diff_quant_ratio_KL, value_type, "min", "bg"),
+    diff_quant_ratio_KL_txtcol = get_colour(diff_quant_ratio_KL, value_type, "min", "txt")
+  ) |> 
+  mutate(
+    across(
+      where(is.numeric), 
+      ~ifelse(value_type == "mean", 
+              scales::number(.x, accuracy = accuracy_digits),
+              str_c("(", scales::number(.x, accuracy = accuracy_digits), ")")
+      )
+    )
+  )
+
+
+opts <- options(knitr.kable.NA = "")
+
+
+print_table <- function(scenario) {
+  
+  table_kb <- table_kb |> filter(scenario == !!scenario) |> 
+    select(
+      scenario, model,
+      # Max AUC
+      `AUC_AUC*`, `brier_AUC*`, `ici_AUC*`, `kl_AUC*`, `quant_ratio_AUC*`,
+      # Min Brier
+      `AUC_Brier*`, `brier_Brier*`, `ici_Brier*`, `kl_Brier*`, `quant_ratio_Brier*`,
+      diff_AUC_Brier, diff_brier_Brier, diff_ICI_Brier, diff_KL_Brier, diff_quant_ratio_Brier,
+      # Min ICI
+      `AUC_ICI*`, `brier_ICI*`, `ici_ICI*`, `kl_ICI*`, `quant_ratio_ICI*`,
+      diff_AUC_ICI, diff_brier_ICI, diff_ICI_ICI, diff_KL_ICI, diff_quant_ratio_ICI,
+      # Min KL
+      `AUC_KL*`, `brier_KL*`, `ici_KL*`, `kl_KL*`, `quant_ratio_KL*`,
+      diff_AUC_KL, diff_brier_KL, diff_ICI_KL, diff_KL_KL, diff_quant_ratio_KL,
+      # colouring variables
+      diff_AUC_Brier_bgcol, diff_brier_Brier_bgcol, diff_ICI_Brier_bgcol, diff_KL_Brier_bgcol, diff_quant_ratio_Brier_bgcol,
+      #
+      diff_AUC_Brier_txtcol, diff_brier_Brier_txtcol, diff_ICI_Brier_txtcol, diff_KL_Brier_txtcol, diff_quant_ratio_Brier_txtcol,
+      #
+      diff_AUC_ICI_bgcol, diff_brier_ICI_bgcol, diff_ICI_ICI_bgcol, diff_KL_ICI_bgcol, diff_quant_ratio_ICI_bgcol,
+      #
+      diff_AUC_ICI_txtcol, diff_brier_ICI_txtcol, diff_ICI_ICI_txtcol, diff_KL_ICI_txtcol, diff_quant_ratio_ICI_txtcol,
+      #
+      diff_AUC_KL_bgcol, diff_brier_KL_bgcol, diff_ICI_KL_bgcol, diff_KL_KL_bgcol, diff_quant_ratio_KL_bgcol,
+      #
+      diff_AUC_KL_txtcol, diff_brier_KL_txtcol, diff_ICI_KL_txtcol, diff_KL_KL_txtcol, diff_quant_ratio_KL_txtcol
+    )
+  
+  knitr::kable(
+    table_kb |> 
+      select(
+        scenario, model,
+        # Max AUC
+        `AUC_AUC*`, `brier_AUC*`, `ici_AUC*`, `kl_AUC*`, `quant_ratio_AUC*`,
+        # Min Brier
+        `AUC_Brier*`, `brier_Brier*`, `ici_Brier*`, `kl_Brier*`, `quant_ratio_Brier*`,
+        diff_AUC_Brier, diff_brier_Brier, diff_ICI_Brier, diff_KL_Brier, diff_quant_ratio_Brier,
+        # Min ICI
+        `AUC_ICI*`, `brier_ICI*`, `ici_ICI*`, `kl_ICI*`, `quant_ratio_ICI*`, 
+        diff_AUC_ICI, diff_brier_ICI, diff_ICI_ICI, diff_KL_ICI, diff_quant_ratio_ICI,
+        # Min KL
+        `AUC_KL*`, `brier_KL*`, `ici_KL*`, `kl_KL*`, `quant_ratio_KL*`,
+        diff_AUC_KL, diff_brier_KL, diff_ICI_KL, diff_KL_KL, diff_quant_ratio_KL
+      ),
+    col.names = c(
+      "Scenario", "Model",
+      # # columns for GLM/GAM/GAMSEL
+      # "AUC", "ICI", "KL", 
+      # columns for ML models selected based on AUC
+      "AUC", "Brier", "ICI", "KL", "Quant. Ratio",
+      # columns for ML models selected based on Brier
+      "AUC", "Brier", "ICI", "KL", "Quant. Ratio", "ΔAUC", "ΔBrier", "ΔICI", "ΔKL", "ΔQR",
+      # columns for ML models selected based on ICI
+      "AUC", "Brier", "ICI", "KL", "Quant. Ratio", "ΔAUC", "ΔBrier", "ΔICI", "ΔKL", "ΔQR",
+      # columns for ML models selected based on KL dist
+      "AUC", "Brier", "ICI", "KL", "Quant. Ratio", "ΔAUC", "ΔBrier","ΔICI", "ΔKL", "ΔQR"
+    ),
+    align = str_c("cl", str_c(rep("c", 5+10*3), collapse = ""), collapse = ""),
+    escape = FALSE, booktabs = T, digits = 3, format = "markdown") |> 
+    # Difference in metrics computed when minnimizing Brier wrt when maximizing AUC
+    kableExtra::column_spec(
+      which(colnames(table_kb) == "diff_AUC_Brier"),
+      background = table_kb$diff_AUC_Brier_bgcol,
+      color = table_kb$diff_AUC_Brier_txtcol
+    ) |>
+    kableExtra::column_spec(
+      which(colnames(table_kb) == "diff_brier_Brier"),
+      background = table_kb$diff_brier_Brier_bgcol,
+      color = table_kb$diff_brier_Brier_txtcol
+    ) |>
+    kableExtra::column_spec(
+      which(colnames(table_kb) == "diff_ICI_Brier"),
+      background = table_kb$diff_ICI_Brier_bgcol,
+      color = table_kb$diff_ICI_Brier_txtcol
+    ) |>
+    kableExtra::column_spec(
+      which(colnames(table_kb) == "diff_KL_Brier"),
+      background = table_kb$diff_KL_Brier_bgcol,
+      color = table_kb$diff_KL_Brier_txtcol
+    ) |>
+    kableExtra::column_spec(
+      which(colnames(table_kb) == "diff_quant_ratio_Brier"),
+      background = table_kb$diff_quant_ratio_Brier_bgcol,
+      color = table_kb$diff_quant_ratio_Brier_txtcol
+    ) |>
+    # Difference in metrics computed when minnimizing ICI wrt when maximizing AUC
+    kableExtra::column_spec(
+      which(colnames(table_kb) == "diff_AUC_ICI"),
+      background = table_kb$diff_AUC_ICI_bgcol,
+      color = table_kb$diff_AUC_ICI_txtcol
+    ) |>
+    kableExtra::column_spec(
+      which(colnames(table_kb) == "diff_brier_ICI"),
+      background = table_kb$diff_brier_ICI_bgcol,
+      color = table_kb$diff_brier_ICI_txtcol
+    ) |>
+    kableExtra::column_spec(
+      which(colnames(table_kb) == "diff_ICI_ICI"),
+      background = table_kb$diff_ICI_ICI_bgcol,
+      color = table_kb$diff_ICI_ICI_txtcol
+    ) |>
+    kableExtra::column_spec(
+      which(colnames(table_kb) == "diff_KL_ICI"),
+      background = table_kb$diff_KL_ICI_bgcol,
+      color = table_kb$diff_KL_ICI_txtcol
+    ) |>
+    kableExtra::column_spec(
+      which(colnames(table_kb) == "diff_quant_ratio_ICI"),
+      background = table_kb$diff_quant_ratio_ICI_bgcol,
+      color = table_kb$diff_quant_ratio_ICI_txtcol
+    ) |>
+    # Difference in metrics computed when minnimizing KL wrt when maximizing AUC
+    kableExtra::column_spec(
+      which(colnames(table_kb) == "diff_AUC_KL"),
+      background = table_kb$diff_AUC_KL_bgcol,
+      color = table_kb$diff_AUC_KL_txtcol
+    ) |>
+    kableExtra::column_spec(
+      which(colnames(table_kb) == "diff_brier_KL"),
+      background = table_kb$diff_brier_KL_bgcol,
+      color = table_kb$diff_brier_KL_txtcol
+    ) |>
+    kableExtra::column_spec(
+      which(colnames(table_kb) == "diff_ICI_KL"),
+      background = table_kb$diff_ICI_KL_bgcol,
+      color = table_kb$diff_ICI_KL_txtcol
+    ) |>
+    kableExtra::column_spec(
+      which(colnames(table_kb) == "diff_KL_KL"),
+      background = table_kb$diff_KL_KL_bgcol,
+      color = table_kb$diff_KL_KL_txtcol
+    ) |>
+     kableExtra::column_spec(
+      which(colnames(table_kb) == "diff_quant_ratio_KL"),
+      background = table_kb$diff_quant_ratio_KL_bgcol,
+      color = table_kb$diff_quant_ratio_KL_txtcol
+    ) |>
+    kableExtra::collapse_rows(columns = 1:2, valign = "top") |>
+    kableExtra::add_header_above(
+      c(" " = 2,
+        # "Generalized Lin. Models" = 3,
+        "AUC*" = 5,
+        "Brier*" = 10,
+        "ICI*" = 10,
+        "KL*" = 10
+      )
+    )
+}
+```
+
+
+
+:::{.panel-tabset}
+
+```{r, echo=FALSE}
+tb_labs <- tibble(scenario = 1:16) |> 
+  mutate(
+    dgp = case_when(
+      scenario %in% 1:4 ~ 1,
+      scenario %in% 5:8 ~ 2,
+      scenario %in% 9:12 ~ 3,
+      scenario %in% 13:16 ~ 4
+    ),
+    no_noise = c(0, 10, 50, 100)[(scenario-1)%%4 + 1],
+    label = str_c("Comparison of metrics for models chosen based on AUC, on Brier Score, on ICI, or on KL divergence (DGP ", dgp, ", ", no_noise, " noise variables)")
+  )
+
+print_table_config <- function(scenarios) {
+  res <- purrr::map_chr(scenarios, \(i) {
+    knitr::knit_child(
+      input = "children-dir/comparison-models-simul-tables.qmd", 
+      envir = environment(), 
+      quiet = TRUE
+    )
+  })
+  
+  cat(res, sep = '\n')
+}
+```
+
+
+##### DGP 1
+
+:::: {.panel-tabset}
+```{r table-resul-simul-1}
+#| output: asis
+#| echo: false
+print_table_config(1:4)
+```
+::::
+
+##### DGP 2
+
+:::: {.panel-tabset}
+```{r table-resul-simul-2}
+#| output: asis
+#| echo: false
+print_table_config(5:8)
+```
+::::
+
+##### DGP 3
+
+:::: {.panel-tabset}
+```{r table-resul-simul-3}
+#| output: asis
+#| echo: false
+print_table_config(9:12)
+```
+::::
+
+##### DGP 4
+
+:::: {.panel-tabset}
+```{r table-resul-simul-4}
+#| output: asis
+#| echo: false
+print_table_config(13:16)
+```
+::::
+
+:::
+
+```{r, echo=FALSE, eval=FALSE}
+# LATEX TABLES
+
+table_models_interest <- 
+  models_interest |> 
+  filter(sample == "Test") |> 
+  select(
+    scenario, sample, model, result_type, 
+    AUC, brier, ici, kl = KL_20_true_probas, quant_ratio,
+    AUC_sd, brier_sd, ici_sd, kl_sd = KL_20_true_probas_sd, quant_ratio_sd
+  ) |> 
+  filter(
+    result_type %in% c("AUC*", "KL*", "None")
+  ) |> 
+  mutate(result_type = fct_recode(result_type, "KL*" = "None")) |> 
+  mutate(value_type = "mean") |> 
+  pivot_wider(
+    names_from = "result_type", 
+    values_from = c("AUC", "brier", "ici", "kl", "quant_ratio", 
+                    "AUC_sd", "brier_sd", "ici_sd", "kl_sd", "quant_ratio_sd")
+  ) |> 
+  mutate(
+    # Difference in metrics computed when minnimizing KL wrt when maximizing AUC
+    diff_AUC_KL = `AUC_KL*` - `AUC_AUC*`,
+    diff_brier_KL = `brier_KL*` - `brier_AUC*`,
+    diff_ICI_KL = `ici_KL*` - `ici_AUC*`,
+    diff_KL_KL = `kl_KL*` - `kl_AUC*`,
+    diff_quant_ratio_KL = `quant_ratio_KL*` - `quant_ratio_AUC*`
+  )
+
+accuracy_digits <- 0.01
+
+
+red_colours <- c(
+  "#FFD6D6", "#FFCCCC", "#FFC2C2", "#FFB8B8", "#FFADAD", 
+  "#FFA3A3", "#FF9999", "#FF8F8F", "#FF8585", "#FF7A7A"
+)
+red_colours_txt <- c(
+  "#333333", "#333333", "#2B2B2B", "#2B2B2B", "#232323", 
+  "#1F1F1F", "#1A1A1A", "#141414", "#101010", "#0A0A0A"
+)
+green_colours <- c(
+  "#E9F6E9", "#D4F2D4", "#BFEFBF", "#AADCA9", "#96C996",
+  "#81B781", "#6CA56C", "#578252", "#426F42", "#2F5D2F"
+)
+green_colours_txt <- c(
+  "#1A1A1A", "#1A1A1A", "#1A1A1A", "#1A1A1A", "#1A1A1A",
+  "#E6E6E6", "#E6E6E6", "#E6E6E6", "#E6E6E6", "#E6E6E6"
+)
+
+
+
+get_range_for_colours <- function(variable_name) {
+  value <- table_models_interest |> 
+    pull(!!variable_name) |> 
+    range(na.rm = TRUE) |> abs() |> max()
+  value * c(-1, 1)
+}
+
+
+table_kb <- 
+  table_models_interest |> 
+  rowwise() |> 
+  mutate(
+    # Difference in metrics computed when minnimizing KL wrt when maximizing AUC
+    diff_AUC_KL_bgcol = get_colour(diff_AUC_KL, value_type, "max", "bg"),
+    diff_AUC_KL_txtcol = get_colour(diff_AUC_KL, value_type, "max", "txt"),
+    diff_brier_KL_bgcol = get_colour(diff_brier_KL, value_type, "min", "bg"),
+    diff_brier_KL_txtcol = get_colour(diff_brier_KL, value_type, "min", "txt"),
+    diff_ICI_KL_bgcol = get_colour(diff_ICI_KL, value_type, "min", "bg"),
+    diff_ICI_KL_txtcol = get_colour(diff_ICI_KL, value_type, "min", "txt"),
+    diff_KL_KL_bgcol = get_colour(diff_KL_KL, value_type, "min", "bg"),
+    diff_KL_KL_txtcol = get_colour(diff_KL_KL, value_type, "min", "txt"),
+    diff_quant_ratio_KL_bgcol = get_colour(diff_quant_ratio_KL, value_type, "min", "bg"),
+    diff_quant_ratio_KL_txtcol = get_colour(diff_quant_ratio_KL, value_type, "min", "txt")
+  ) |> 
+  mutate(scenario = as.character(scenario)) |> 
+  mutate(
+    across(
+      where(is.numeric), 
+      ~ifelse(value_type == "mean", 
+              scales::number(.x, accuracy = accuracy_digits),
+              str_c("(", scales::number(.x, accuracy = accuracy_digits), ")")
+      )
+    )
+  ) |> 
+  mutate(
+    # AUC*
+    auc_star_auc = str_c(`AUC_AUC*`, " (", `AUC_sd_AUC*`, ")"),
+    auc_star_brier = str_c(`brier_AUC*`, " (", `brier_sd_AUC*`, ")"),
+    auc_star_ici = str_c(`ici_AUC*`, " (", `ici_sd_AUC*`, ")"),
+    auc_star_kl = str_c(`kl_AUC*`, " (", `kl_sd_AUC*`, ")"),
+    auc_star_quant_ratio = str_c(`quant_ratio_AUC*`, " (", `quant_ratio_sd_AUC*`, ")"),
+    # KL*
+    kl_star_auc = str_c(`AUC_KL*`, " (", `AUC_sd_KL*`, ")"),
+    kl_star_brier = str_c(`brier_KL*`, " (", `brier_sd_KL*`, ")"),
+    kl_star_ici = str_c(`ici_KL*`, " (", `ici_sd_KL*`, ")"),
+    kl_star_kl = str_c(`kl_KL*`, " (", `kl_sd_KL*`, ")"),
+    kl_star_quant_ratio = str_c(`quant_ratio_KL*`, " (", `quant_ratio_sd_KL*`, ")"),
+  ) |> 
+  select(
+    scenario, model, 
+    auc_star_auc, auc_star_brier, auc_star_ici, auc_star_kl, auc_star_quant_ratio,
+    kl_star_auc, kl_star_brier, kl_star_ici, kl_star_kl, kl_star_quant_ratio,
+    diff_AUC_KL, diff_brier_KL, diff_ICI_KL, diff_KL_KL, diff_quant_ratio_KL,
+    diff_AUC_KL_bgcol, diff_AUC_KL_txtcol,
+    diff_brier_KL_bgcol, diff_brier_KL_txtcol,
+    diff_ICI_KL_bgcol, diff_ICI_KL_txtcol,
+    diff_KL_KL_bgcol, diff_KL_KL_txtcol,
+    diff_quant_ratio_KL_bgcol, diff_quant_ratio_KL_txtcol
+    ) |> 
+  filter(model != "Trees") |> 
+  mutate(scenario = as.numeric(scenario)) |> 
+  arrange(scenario, model)
+
+
+opts <- options(knitr.kable.NA = "")
+
+# scenarios <- c(1, 5, 9, 13)
+
+print_table <- function(scenarios, format = "markdown") {
+  
+  table_kb_tmp <- table_kb |> filter(scenario %in% !!scenarios)
+  
+  knitr::kable(
+    table_kb_tmp |> 
+      select(
+        -diff_AUC_KL_bgcol, -diff_AUC_KL_txtcol,
+        -diff_brier_KL_bgcol, -diff_brier_KL_txtcol,
+        -diff_ICI_KL_bgcol, -diff_ICI_KL_txtcol,
+        -diff_KL_KL_bgcol, -diff_KL_KL_txtcol,
+        -diff_quant_ratio_KL_bgcol, -diff_quant_ratio_KL_txtcol
+      ),
+    col.names = c(
+      "Scenario", "Model",
+      "AUC", "brier", "ICI", "KL", "Quant. Ratio",
+      # columns for ML models selected based on KL dist
+      "AUC", "Brier" ,"ICI", "KL", "Quant. Ratio", "ΔAUC", "ΔBrier", "ΔICI", "ΔKL", "ΔQR"
+    ),
+    align = str_c("cl", str_c(rep("c", 5+10), collapse = ""), collapse = ""),
+    # escape = FALSE, 
+    booktabs = T, digits = 3, format = format) |> 
+    kableExtra::column_spec(
+      which(colnames(table_kb_tmp) == "diff_AUC_KL"),
+      background = table_kb_tmp$diff_AUC_KL_bgcol,
+      color = table_kb_tmp$diff_AUC_KL_txtcol
+    ) |>
+    kableExtra::column_spec(
+      which(colnames(table_kb_tmp) == "diff_brier_KL"),
+      background = table_kb_tmp$diff_brier_KL_bgcol,
+      color = table_kb_tmp$diff_brier_KL_txtcol
+    ) |>
+    kableExtra::column_spec(
+      which(colnames(table_kb_tmp) == "diff_ICI_KL"),
+      background = table_kb_tmp$diff_ICI_KL_bgcol,
+      color = table_kb_tmp$diff_ICI_KL_txtcol
+    ) |>
+    kableExtra::column_spec(
+      which(colnames(table_kb_tmp) == "diff_KL_KL"),
+      background = table_kb_tmp$diff_KL_KL_bgcol,
+      color = table_kb_tmp$diff_KL_KL_txtcol
+    ) |>
+    kableExtra::collapse_rows(columns = 1:2, valign = "top") |>
+    kableExtra::add_header_above(
+      c(" " = 2,
+        # "Generalized Lin. Models" = 3,
+        "AUC*" = 5,
+        "KL*" = 11
+      )
+    )
+}
+
+# 0 noise variables
+print_table(scenarios = 1:4, format = "latex")
+# 10 noise variables
+print_table(scenarios = 5:8, format = "latex")
+# 50 noise variables
+print_table(scenarios = 9:12, format = "latex")
+# 100 noise variables
+print_table(scenarios = 13:16, format = "latex")
+```
+
+

@@ -1,0 +1,11 @@
+##### `r tb_labs |> slice(i) |> pull(no_noise)`
+
+```{r}
+#| echo: false
+#| warning: false
+#| fig-cap: !expr glue::glue("{tb_labs |> slice(i) |> pull(label)}")
+#| fig-height: 3.5
+#| fig-width: 10
+scenario_number <- tb_labs |> slice(i) |> pull("scenario")
+plot_metric_leaves(scenario_number = scenario_number)
+```

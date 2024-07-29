@@ -1,0 +1,13 @@
+####### `r tb_labs |> slice(i) |> pull(no_noise)`
+
+```{r}
+#| echo: false
+#| warning: false
+#| fig-cap: !expr glue::glue("{tb_labs |> slice(i) |> pull(label)}")
+#| fig-height: 2.5
+#| fig-width: 8
+lab <- tb_labs |> slice(i) |> pull("label")
+scenario_number <- tb_labs |> slice(i) |> pull("scenario")
+num_tree <- tb_labs |> slice(i) |> pull("num_trees")
+plot_hist_scenario(scenario = scenario_number, repn = repn, num_tree = num_tree)
+```

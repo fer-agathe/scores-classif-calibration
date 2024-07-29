@@ -1,0 +1,2213 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.4.553">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Probabilistic Scores of Classifiers: Calibration is not Enough - 14&nbsp; Datasets and Priors</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+  margin-bottom: 0em;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./book_real_estimations.html" rel="next">
+<link href="./book_real_example.html" rel="prev">
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script src="site_libs/quarto-contrib/pseudocode-2.4.1/pseudocode.min.js"></script>
+<link href="site_libs/quarto-contrib/pseudocode-2.4.1/pseudocode.min.css" rel="stylesheet">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({ TeX: { extensions: ["color.js"] }});
+</script>
+<script type="text/x-mathjax-config">
+	MathJax.Hub.Register.StartupHook("TeX color Ready", function() {
+	     MathJax.Extension["TeX/color"].colors["wongBlack"] = '#000000';
+		 MathJax.Extension["TeX/color"].colors["wongGold"] = '#E69F00';
+		 MathJax.Extension["TeX/color"].colors["wongLightBlue"] = '#56B4E9';
+		 MathJax.Extension["TeX/color"].colors["wongGreen"] = '#009E73';
+		 MathJax.Extension["TeX/color"].colors["wongYellow"] = '#F0E442';
+		 MathJax.Extension["TeX/color"].colors["wongBlue"] = '#0072B2';
+		 MathJax.Extension["TeX/color"].colors["wongOrange"] = '#D55E00';
+		 MathJax.Extension["TeX/color"].colors["wongPurple"] = '#CC79A7';
+		 
+		 
+		 MathJax.Extension["TeX/color"].colors["IBMBlue"] = '#648FFF';
+		 MathJax.Extension["TeX/color"].colors["IBMPurple"] = '#785EF0';
+		 MathJax.Extension["TeX/color"].colors["IBMMagenta"] = '#DC267F';
+		 MathJax.Extension["TeX/color"].colors["IBMOrange"] = '#FE6100';
+		 MathJax.Extension["TeX/color"].colors["IBMYellow"] = '#FFB000';
+	});
+</script>
+
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="nav-sidebar floating">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./book_real_example.html">Real-world Data</a></li><li class="breadcrumb-item"><a href="./book_real_beta.html"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Datasets and Priors</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="./">Probabilistic Scores of Classifiers: Calibration is not Enough</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Introduction</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" aria-expanded="true">
+ <span class="menu-text">Subsampling</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./book_target_distribution.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Targeted Distribution</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" aria-expanded="true">
+ <span class="menu-text">Metrics</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./book_metrics.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Metrics</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" aria-expanded="true">
+ <span class="menu-text">Simulated Data</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./book_ojeda.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Simulated Data</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./book_ojeda_trees.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Decision Trees</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./book_ojeda_forests.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Random Forests</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./book_ojeda_forests_ntrees.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Random Forests: number of trees</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./book_ojeda_boosting.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Extreme Gradient Boosting</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./book_ojeda_glm.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Generalized Linear Models</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./book_ojeda_gam.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Generalized Additive Models</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./book_ojeda_gamsel.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Generalized Additive Model Selection</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./book_ojeda_comparison.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Comparison of Models</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" aria-expanded="true">
+ <span class="menu-text">Real-world Data</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./book_real_example.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Priors: Illustration</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./book_real_beta.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Datasets and Priors</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./book_real_estimations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Estimations</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./book_real_results.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">16</span>&nbsp; <span class="chapter-title">Results</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./references.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">References</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#datasets" id="toc-datasets" class="nav-link active" data-scroll-target="#datasets"><span class="header-section-number">14.1</span> Datasets</a>
+  <ul class="collapse">
+  <li><a href="#abalone" id="toc-abalone" class="nav-link" data-scroll-target="#abalone"><span class="header-section-number">14.1.1</span> Abalone</a></li>
+  <li><a href="#adult" id="toc-adult" class="nav-link" data-scroll-target="#adult"><span class="header-section-number">14.1.2</span> Adult</a></li>
+  <li><a href="#bank-marketing" id="toc-bank-marketing" class="nav-link" data-scroll-target="#bank-marketing"><span class="header-section-number">14.1.3</span> Bank Marketing</a></li>
+  <li><a href="#default-of-credit-card-clients" id="toc-default-of-credit-card-clients" class="nav-link" data-scroll-target="#default-of-credit-card-clients"><span class="header-section-number">14.1.4</span> Default of Credit Card Clients</a></li>
+  <li><a href="#dry-bean" id="toc-dry-bean" class="nav-link" data-scroll-target="#dry-bean"><span class="header-section-number">14.1.5</span> Dry Bean</a></li>
+  <li><a href="#in-vehicle-coupon-recommendation" id="toc-in-vehicle-coupon-recommendation" class="nav-link" data-scroll-target="#in-vehicle-coupon-recommendation"><span class="header-section-number">14.1.6</span> In-Vehicle Coupon Recommendation</a></li>
+  <li><a href="#mushroom" id="toc-mushroom" class="nav-link" data-scroll-target="#mushroom"><span class="header-section-number">14.1.7</span> Mushroom</a></li>
+  <li><a href="#occupancy-detection" id="toc-occupancy-detection" class="nav-link" data-scroll-target="#occupancy-detection"><span class="header-section-number">14.1.8</span> Occupancy Detection</a></li>
+  <li><a href="#wine-quality" id="toc-wine-quality" class="nav-link" data-scroll-target="#wine-quality"><span class="header-section-number">14.1.9</span> Wine Quality</a></li>
+  <li><a href="#spambase" id="toc-spambase" class="nav-link" data-scroll-target="#spambase"><span class="header-section-number">14.1.10</span> Spambase</a></li>
+  </ul></li>
+  <li><a href="#summary" id="toc-summary" class="nav-link" data-scroll-target="#summary"><span class="header-section-number">14.2</span> Summary</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./book_real_example.html">Real-world Data</a></li><li class="breadcrumb-item"><a href="./book_real_beta.html"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Datasets and Priors</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span id="sec-priors-beta" class="quarto-section-identifier"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Datasets and Priors</span></span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>This chapter provides priors for the distribution of the true probability of binary events from the real-world dataset used in the paper. It uses the functions defined in <a href="book_real_example.html" class="quarto-xref">Chapter&nbsp;<span>13</span></a>. We assume that the true probabilities are distributed according to a Beta distribution. The parameters of that distribution are obtained by fitting a Beta distribution by maximimum likelihood on the scores estimated using three models: a Generalized Linear Model (GLM), a Generalized Additive Model (GAM), and a Generalized Additive Model with model selection (GAMSEL).</p>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.1.4     ✔ readr     2.1.4
+✔ forcats   1.0.0     ✔ stringr   1.5.1
+✔ ggplot2   3.5.0     ✔ tibble    3.2.1
+✔ lubridate 1.9.3     ✔ tidyr     1.3.0
+✔ purrr     1.0.2     
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(gam)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: splines
+Loading required package: foreach
+
+Attaching package: 'foreach'
+
+The following objects are masked from 'package:purrr':
+
+    accumulate, when
+
+Loaded gam 1.22-2</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(gamsel)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loaded gamsel 1.8-2</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Colours for train/test</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>colour_samples <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Train"</span> <span class="ot">=</span> <span class="st">"#0072B2"</span>,</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Test"</span> <span class="ot">=</span> <span class="st">"#D55E00"</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Let us load the functions defined in <a href="book_real_example.html" class="quarto-xref">Chapter&nbsp;<span>13</span></a>:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"functions/real-data.R"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>We will store the results obtained from the estimations in the <code>output/real-data/</code> folder.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="st">"output/real-data/"</span>)) <span class="fu">dir.create</span>(<span class="st">"output/real-data/"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<section id="datasets" class="level2" data-number="14.1">
+<h2 data-number="14.1" class="anchored" data-anchor-id="datasets"><span class="header-section-number">14.1</span> Datasets</h2>
+<p>All the datasets used here are from the <a href="https://archive.ics.uci.edu/">UCI Machine Learning Repository</a>.</p>
+<section id="abalone" class="level3" data-number="14.1.1">
+<h3 data-number="14.1.1" class="anchored" data-anchor-id="abalone"><span class="header-section-number">14.1.1</span> Abalone</h3>
+<ul>
+<li>URL to the data: <a href="https://archive.ics.uci.edu/dataset/1/abalone" class="uri">https://archive.ics.uci.edu/dataset/1/abalone</a></li>
+<li>Description: Predict the age of abalone from physical measurements.</li>
+<li>Number of instances: 4,177</li>
+<li>Features: 8</li>
+<li>Reference: <span class="citation" data-cites="misc_abalone_1">Nash et al. (<a href="references.html#ref-misc_abalone_1" role="doc-biblioref">1995</a>)</span></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>name <span class="ot">&lt;-</span> <span class="st">"abalone"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The dataset needs to be download.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code to download the data</summary>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="st">"data"</span>)) <span class="fu">dir.create</span>(<span class="st">"data"</span>)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="fu">download.file</span>(</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">url =</span> <span class="fu">str_c</span>(<span class="st">"https://archive.ics.uci.edu/static/public/1/"</span>, name, <span class="st">".zip"</span>), </span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">destfile =</span> <span class="fu">str_c</span>(<span class="st">"data/"</span>, name, <span class="st">".zip"</span>)</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>Then, we can import the dataset:</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code to import the data</summary>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>tb_abalone <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">file =</span> <span class="fu">unz</span>(<span class="fu">str_c</span>(<span class="st">"data/"</span>, name, <span class="st">".zip"</span>), <span class="fu">str_c</span>(name, <span class="st">".data"</span>)), </span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">col_names =</span> <span class="fu">c</span>(</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Sex"</span>, <span class="st">"Length"</span>, <span class="st">"Diameter"</span>, <span class="st">"Height"</span>, <span class="st">"Whole_weight"</span>, </span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Shucked_weight"</span>, <span class="st">"Viscera_weight"</span>, <span class="st">"Shell_weight"</span>, <span class="st">"Rings"</span>),</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">show_col_types =</span> <span class="cn">FALSE</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>The target variable is <code>sex</code>. Let us turn it in a <span class="math inline">\(\{0,1\}\)</span> variable.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>tb_abalone <span class="ot">&lt;-</span> tb_abalone <span class="sc">|&gt;</span> </span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">Sex =</span> <span class="fu">ifelse</span>(Sex <span class="sc">==</span> <span class="st">"M"</span>, <span class="dv">1</span>, <span class="dv">0</span>)) </span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>target_name <span class="ot">&lt;-</span> <span class="st">"Sex"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Let us call the <code class="sourceCode r"><span class="fu">get_beta_fit</span>()</code> from <a href="book_real_example.html" class="quarto-xref">Chapter&nbsp;<span>13</span></a> to get our priors.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>priors_abalone <span class="ot">&lt;-</span> <span class="fu">get_beta_fit</span>(</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">dataset =</span> tb_abalone, <span class="at">target_name =</span> target_name, <span class="at">seed =</span> <span class="dv">1234</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Let us save the results and the dataset:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(priors_abalone, <span class="at">file =</span> <span class="st">"output/real-data/priors_abalone.rda"</span>)</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(tb_abalone, <span class="at">file =</span> <span class="st">"output/real-data/tb_abalone.rda"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_hist_scores_beta</span>(priors_abalone, <span class="st">"abalone"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div id="fig-example-beta-abalone" class="quarto-figure quarto-figure-center quarto-float anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-fig" id="fig-example-beta-abalone-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;14.1: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the Abalone dataset.
+</figcaption>
+<div aria-describedby="fig-example-beta-abalone-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="book_real_beta_files/figure-html/fig-example-beta-abalone-1.png" class="img-fluid figure-img" width="672">
+</div>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="adult" class="level3" data-number="14.1.2">
+<h3 data-number="14.1.2" class="anchored" data-anchor-id="adult"><span class="header-section-number">14.1.2</span> Adult</h3>
+<ul>
+<li>URL to the data: <a href="https://archive.ics.uci.edu/dataset/2/adult" class="uri">https://archive.ics.uci.edu/dataset/2/adult</a></li>
+<li>Description: Predict whether income exceeds $50K/yr based on census data. Also known as “Census Income” dataset.</li>
+<li>Number of instances: 48,842</li>
+<li>Features: 14</li>
+<li>Reference: <span class="citation" data-cites="misc_adult_2">Becker and Kohavi (<a href="references.html#ref-misc_adult_2" role="doc-biblioref">1996</a>)</span></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>name <span class="ot">&lt;-</span> <span class="st">"adult"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The dataset needs to be download.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code to download the data</summary>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="st">"data"</span>)) <span class="fu">dir.create</span>(<span class="st">"data"</span>)</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="fu">download.file</span>(</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">url =</span> <span class="fu">str_c</span>(<span class="st">"https://archive.ics.uci.edu/static/public/2/"</span>, name, <span class="st">".zip"</span>), </span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">destfile =</span> <span class="fu">str_c</span>(<span class="st">"data/"</span>, name, <span class="st">".zip"</span>)</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>info_data <span class="ot">&lt;-</span> <span class="fu">scan</span>(</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">unz</span>(<span class="fu">str_c</span>(<span class="st">"data/"</span>, name, <span class="st">".zip"</span>), <span class="fu">str_c</span>(name, <span class="st">".names"</span>)), </span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">what =</span> <span class="st">"character"</span>, <span class="at">sep =</span> <span class="st">"</span><span class="sc">\n</span><span class="st">"</span></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Print the names for this dataset (not very convenient...)</span></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a><span class="fu">str_extract</span>(info_data[<span class="dv">94</span><span class="sc">:</span><span class="fu">length</span>(info_data)], <span class="st">"^(.*):"</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">str_remove</span>(<span class="st">":$"</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>  (\(.x) <span class="fu">str_c</span>(<span class="st">'"'</span>, .x, <span class="st">'",'</span>))() <span class="sc">|&gt;</span> </span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>Then, we can import the dataset:</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code to import the data</summary>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>tb_adult <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">file =</span> <span class="fu">unz</span>(<span class="fu">str_c</span>(<span class="st">"data/"</span>, name, <span class="st">".zip"</span>), <span class="fu">str_c</span>(name, <span class="st">".data"</span>)), </span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">col_names =</span> <span class="fu">c</span>(</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">"age"</span>, <span class="st">"workclass"</span>, <span class="st">"fnlwgt"</span>, <span class="st">"education"</span>, <span class="st">"education-num"</span>,</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">"marital-status"</span>, <span class="st">"occupation"</span>, <span class="st">"relationship"</span>, <span class="st">"race"</span>, <span class="st">"sex"</span>,</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">"capital-gain"</span>, <span class="st">"capital-loss"</span>, <span class="st">"hours-per-week"</span>, <span class="st">"native-country"</span>,</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">"income"</span></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">show_col_types =</span> <span class="cn">FALSE</span></span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>The target variable is <code>income</code>. Let us turn it in a <span class="math inline">\(\{0,1\}\)</span> variable and call it <code>high_income</code>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>tb_adult <span class="ot">&lt;-</span> tb_adult <span class="sc">|&gt;</span> </span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">high_income =</span> <span class="fu">ifelse</span>(income <span class="sc">==</span> <span class="st">"&gt;50K"</span>, <span class="dv">1</span>, <span class="dv">0</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="sc">-</span>income)</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>target_name <span class="ot">&lt;-</span> <span class="st">"high_income"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Let us call the <code class="sourceCode r"><span class="fu">get_beta_fit</span>()</code> from <a href="book_real_example.html" class="quarto-xref">Chapter&nbsp;<span>13</span></a> to get our priors.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>priors_adult <span class="ot">&lt;-</span> <span class="fu">get_beta_fit</span>(</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">dataset =</span> tb_adult, <span class="at">target_name =</span> target_name, <span class="at">seed =</span> <span class="dv">1234</span></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Let us save the results and the dataset:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(priors_adult, <span class="at">file =</span> <span class="st">"output/real-data/priors_adult.rda"</span>)</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(tb_adult, <span class="at">file =</span> <span class="st">"output/real-data/tb_adult.rda"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_hist_scores_beta</span>(priors_adult, <span class="st">"adult"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div id="fig-example-beta-adult" class="quarto-figure quarto-figure-center quarto-float anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-fig" id="fig-example-beta-adult-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;14.2: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the Adult dataset.
+</figcaption>
+<div aria-describedby="fig-example-beta-adult-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="book_real_beta_files/figure-html/fig-example-beta-adult-1.png" class="img-fluid figure-img" width="672">
+</div>
+</figure>
+</div>
+</div>
+</div>
+<!-- ### Appartment for Rent Classified -->
+<!-- URL to the data: <https://archive.ics.uci.edu/dataset/555/apartment+for+rent+classified> -->
+<!-- This is a dataset of classified for apartments for rent in USA. -->
+<!-- Number of instances: 10,000 -->
+<!-- Features: 21 -->
+<!-- ```{r define-name-appartment} -->
+<!-- name <- "appartment" -->
+<!-- ``` -->
+<!-- The dataset needs to be download. -->
+<!-- ```{r download-appartment, eval=FALSE} -->
+<!-- #| code-fold: true -->
+<!-- #| code-summary: Code to download the data -->
+<!-- if (!dir.exists("data")) dir.create("data") -->
+<!-- download.file( -->
+<!--   url = str_c( -->
+<!--     "https://archive.ics.uci.edu/static/public/555/",  -->
+<!--     "apartment+for+rent+classified.zip" -->
+<!--   ),  -->
+<!--   destfile = str_c("data/", name, ".zip") -->
+<!-- ) -->
+<!-- ``` -->
+<!-- Then, we can import the dataset: -->
+<!-- ```{r import-appartment-data} -->
+<!-- #| code-fold: true -->
+<!-- #| code-summary: Code to import the data -->
+<!-- # Extract ZIP file -->
+<!-- unzip("data/appartment.zip", exdir = "data/appartment") -->
+<!-- # Extract the 7z file -->
+<!-- system("7z x data/appartment/apartments_for_rent_classified_100K.7z -odata/appartment") -->
+<!-- csv_file_path <- "data/appartment/apartments_for_rent_classified_100K.csv" -->
+<!-- tb_appartment <- read_csv2(csv_file_path, show_col_types = FALSE) |>  -->
+<!--   select(-id, -title, -body, -price_display, -address, -time, -price_type, -currency, -amenities, -fee) -->
+<!-- system("rm -rf data/appartment/") -->
+<!-- ``` -->
+<!-- The target variable is `sex`. Let us turn it in a $\{0,1\}$` variable. -->
+<!-- ```{r tb_appartment-target} -->
+<!-- tb_appartment <- tb_appartment |> -->
+<!--   mutate( -->
+<!--     cityname = fct_lump(cityname, prop = 0.01), -->
+<!--     state = fct_lump(state, prop = 0.02), -->
+<!--     source = fct_lump(source, prop = 0.01), -->
+<!--     latitude = as.numeric(latitude), -->
+<!--     longitude = as.numeric(longitude) -->
+<!--   ) |>  -->
+<!--   mutate(across(where(is.character), ~as.factor(as.numeric(as.factor(.x))))) |>  -->
+<!--   mutate( -->
+<!--     high_square_feet = square_feet > median(square_feet) -->
+<!--   ) |>  -->
+<!--   select(-square_feet) -->
+<!-- tb_appartment <- na.omit(tb_appartment) -->
+<!-- nrow(tb_appartment) -->
+<!-- target_name <- "high_square_feet" -->
+<!-- ``` -->
+<!-- Let us call the `get_beta_fit()`{.R} from [Chapter -@sec-real-example] to get our priors. -->
+<!-- ```{r estim-appartment, eval=FALSE} -->
+<!-- priors_appartment <- get_beta_fit( -->
+<!--   dataset = tb_appartment, target_name = target_name, seed = 1234 -->
+<!-- ) -->
+<!-- ``` -->
+<!-- Let us save the results and the dataset: -->
+<!-- ```{r, eval=FALSE} -->
+<!-- save(priors_appartment, file = "output/real-data/priors_appartment.rda") -->
+<!-- save(tb_appartment, file = "output/real-data/tb_appartment.rda") -->
+<!-- ``` -->
+<!-- ```{r, echo=FALSE} -->
+<!-- load("output/real-data/priors_appartment.rda") -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- #| fig-cap: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the Appartment dataset. -->
+<!-- #| label: fig-example-beta-appartment -->
+<!-- plot_hist_scores_beta(priors_appartment, "appartment") -->
+<!-- ``` -->
+</section>
+<section id="bank-marketing" class="level3" data-number="14.1.3">
+<h3 data-number="14.1.3" class="anchored" data-anchor-id="bank-marketing"><span class="header-section-number">14.1.3</span> Bank Marketing</h3>
+<ul>
+<li>URL to the data: <a href="https://archive.ics.uci.edu/dataset/222/bank+marketing" class="uri">https://archive.ics.uci.edu/dataset/222/bank+marketing</a></li>
+<li>Description: The data is related with direct marketing campaigns (phone calls) of a Portuguese banking institution. The classification goal is to predict if the client will subscribe a term deposit (variable y).</li>
+<li>Number of instances: 45,211</li>
+<li>Features: 16</li>
+<li>Reference: <span class="citation" data-cites="misc_bank_marketing_222">Moro, Rita, and Cortez (<a href="references.html#ref-misc_bank_marketing_222" role="doc-biblioref">2012</a>)</span></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>name <span class="ot">&lt;-</span> <span class="st">"bank"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The dataset needs to be download.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code to download the data</summary>
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="st">"data"</span>)) <span class="fu">dir.create</span>(<span class="st">"data"</span>)</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a><span class="fu">download.file</span>(</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">url =</span> <span class="st">"https://archive.ics.uci.edu/static/public/222/bank+marketing.zip"</span>, </span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">destfile =</span> <span class="fu">str_c</span>(<span class="st">"data/"</span>, name, <span class="st">".zip"</span>)</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>Then, we can import the dataset:</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code to import the data</summary>
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="fu">dir.create</span>(<span class="st">"data/bank/"</span>)</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a><span class="fu">system</span>(<span class="st">"unzip data/bank.zip -d data/bank/"</span>)</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a><span class="fu">system</span>(<span class="st">"unzip data/bank/bank.zip -d data/bank/"</span>)</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>tb_bank <span class="ot">&lt;-</span> <span class="fu">read_csv2</span>(</span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">file =</span> <span class="fu">unz</span>(<span class="fu">str_c</span>(<span class="st">"data/bank/"</span>, name, <span class="st">".zip"</span>), <span class="fu">str_c</span>(<span class="st">"bank-full.csv"</span>)), </span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">skip =</span> <span class="dv">1</span>,</span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">col_names =</span> <span class="fu">c</span>(</span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>    <span class="st">"age"</span>, <span class="st">"job"</span>, <span class="st">"marital"</span>, <span class="st">"education"</span>, <span class="st">"default"</span>, <span class="st">"balance"</span>, <span class="st">"housing"</span>, </span>
+<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">"loan"</span>, <span class="st">"contact"</span>, <span class="st">"day"</span>, <span class="st">"month"</span>, <span class="st">"duration"</span>, <span class="st">"campaign"</span>, <span class="st">"pdays"</span>, </span>
+<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">"previous"</span>, <span class="st">"poutcome"</span>, <span class="st">"y"</span></span>
+<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb26-12"><a href="#cb26-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">show_col_types =</span> <span class="cn">FALSE</span></span>
+<span id="cb26-13"><a href="#cb26-13" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stderr">
+<pre><code>ℹ Using "','" as decimal and "'.'" as grouping mark. Use `read_delim()` for more control.</code></pre>
+</div>
+<details class="code-fold">
+<summary>Code to import the data</summary>
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="fu">system</span>(<span class="st">"rm -rf data/bank/"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>The target variable is <code>y</code> (whether the client will subscribe a term deposit). Let us turn it in a <span class="math inline">\(\{0,1\}\)</span> variable.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>tb_bank <span class="ot">&lt;-</span> tb_bank <span class="sc">|&gt;</span> </span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">y =</span> <span class="fu">ifelse</span>(y <span class="sc">==</span> <span class="st">"yes"</span>, <span class="dv">1</span>, <span class="dv">0</span>)) </span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>target_name <span class="ot">&lt;-</span> <span class="st">"y"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Let us call the <code class="sourceCode r"><span class="fu">get_beta_fit</span>()</code> from <a href="book_real_example.html" class="quarto-xref">Chapter&nbsp;<span>13</span></a> to get our priors.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>priors_bank <span class="ot">&lt;-</span> <span class="fu">get_beta_fit</span>(</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">dataset =</span> tb_bank, <span class="at">target_name =</span> target_name, <span class="at">seed =</span> <span class="dv">1234</span></span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Let us save the results and the dataset:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(priors_bank, <span class="at">file =</span> <span class="st">"output/real-data/priors_bank.rda"</span>)</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(tb_bank, <span class="at">file =</span> <span class="st">"output/real-data/tb_bank.rda"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_hist_scores_beta</span>(priors_bank, <span class="st">"bank"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div id="fig-example-beta-bank" class="quarto-figure quarto-figure-center quarto-float anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-fig" id="fig-example-beta-bank-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;14.3: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the Bank Marketing dataset.
+</figcaption>
+<div aria-describedby="fig-example-beta-bank-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="book_real_beta_files/figure-html/fig-example-beta-bank-1.png" class="img-fluid figure-img" width="672">
+</div>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="default-of-credit-card-clients" class="level3" data-number="14.1.4">
+<h3 data-number="14.1.4" class="anchored" data-anchor-id="default-of-credit-card-clients"><span class="header-section-number">14.1.4</span> Default of Credit Card Clients</h3>
+<ul>
+<li>URL to the data: <a href="https://archive.ics.uci.edu/dataset/350/default+of+credit+card+clients" class="uri">https://archive.ics.uci.edu/dataset/350/default+of+credit+card+clients</a></li>
+<li>Description: This research aimed at the case of customers’ default payments in Taiwan and compares the predictive accuracy of probability of default among six data mining methods.</li>
+<li>Number of instances: 30,000</li>
+<li>Features: 23</li>
+<li>Reference: <span class="citation" data-cites="misc_default_of_credit_card_clients_350">Yeh (<a href="references.html#ref-misc_default_of_credit_card_clients_350" role="doc-biblioref">2016</a>)</span></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>name <span class="ot">&lt;-</span> <span class="st">"default"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The dataset needs to be download.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code to download the data</summary>
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="st">"data"</span>)) <span class="fu">dir.create</span>(<span class="st">"data"</span>)</span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a><span class="fu">download.file</span>(</span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">url =</span> <span class="fu">str_c</span>(<span class="st">"https://archive.ics.uci.edu/static/public/350/"</span>,</span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>              <span class="st">"default+of+credit+card+clients.zip"</span></span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>  ), </span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">destfile =</span> <span class="fu">str_c</span>(<span class="st">"data/"</span>, name, <span class="st">".zip"</span>)</span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>Then, we can import the dataset:</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code to import the data</summary>
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="fu">dir.create</span>(<span class="st">"data/default/"</span>)</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a><span class="fu">system</span>(<span class="st">"unzip data/default.zip -d data/default/"</span>)</span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>tb_default <span class="ot">&lt;-</span> readxl<span class="sc">::</span><span class="fu">read_excel</span>(</span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">path =</span> <span class="st">"data/default/default of credit card clients.xls"</span>,</span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">skip =</span> <span class="dv">1</span></span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span> </span>
+<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>ID)</span>
+<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a><span class="fu">system</span>(<span class="st">"rm -rf data/default"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>The target variable is <code>defalut</code> (1 if default, 0 otherwise).</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>tb_default <span class="ot">&lt;-</span> </span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>  tb_default <span class="sc">|&gt;</span> </span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">across</span>(<span class="fu">all_of</span>(<span class="fu">c</span>(</span>
+<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a>      <span class="st">"SEX"</span>, <span class="st">"EDUCATION"</span>, <span class="st">"MARRIAGE"</span>, </span>
+<span id="cb36-6"><a href="#cb36-6" aria-hidden="true" tabindex="-1"></a>      <span class="st">"PAY_0"</span>, <span class="st">"PAY_2"</span>, <span class="st">"PAY_3"</span>, <span class="st">"PAY_4"</span>, <span class="st">"PAY_5"</span>, <span class="st">"PAY_6"</span>)), as.factor)</span>
+<span id="cb36-7"><a href="#cb36-7" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span> </span>
+<span id="cb36-8"><a href="#cb36-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb36-9"><a href="#cb36-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">across</span>(<span class="fu">all_of</span>(<span class="fu">c</span>(</span>
+<span id="cb36-10"><a href="#cb36-10" aria-hidden="true" tabindex="-1"></a>      <span class="st">"EDUCATION"</span>, <span class="st">"PAY_0"</span>, <span class="st">"PAY_2"</span>, <span class="st">"PAY_3"</span>, <span class="st">"PAY_4"</span>, <span class="st">"PAY_5"</span>, <span class="st">"PAY_6"</span></span>
+<span id="cb36-11"><a href="#cb36-11" aria-hidden="true" tabindex="-1"></a>    )), <span class="sc">~</span><span class="fu">fct_lump</span>(.x, <span class="at">prop =</span> .<span class="dv">05</span>)</span>
+<span id="cb36-12"><a href="#cb36-12" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb36-13"><a href="#cb36-13" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span> </span>
+<span id="cb36-14"><a href="#cb36-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">default =</span> <span class="st">`</span><span class="at">default payment next month</span><span class="st">`</span>)</span>
+<span id="cb36-15"><a href="#cb36-15" aria-hidden="true" tabindex="-1"></a>target_name <span class="ot">&lt;-</span> <span class="st">"default"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Let us call the <code class="sourceCode r"><span class="fu">get_beta_fit</span>()</code> from <a href="book_real_example.html" class="quarto-xref">Chapter&nbsp;<span>13</span></a> to get our priors.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>priors_default <span class="ot">&lt;-</span> <span class="fu">get_beta_fit</span>(</span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">dataset =</span> tb_default, <span class="at">target_name =</span> target_name, <span class="at">seed =</span> <span class="dv">1234</span></span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Let us save the results and the dataset:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(priors_default, <span class="at">file =</span> <span class="st">"output/real-data/priors_default.rda"</span>)</span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(tb_default, <span class="at">file =</span> <span class="st">"output/real-data/tb_default.rda"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_hist_scores_beta</span>(priors_default, <span class="st">"default"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div id="fig-example-beta-default" class="quarto-figure quarto-figure-center quarto-float anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-fig" id="fig-example-beta-default-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;14.4: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the Default of Credit Card Clients dataset.
+</figcaption>
+<div aria-describedby="fig-example-beta-default-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="book_real_beta_files/figure-html/fig-example-beta-default-1.png" class="img-fluid figure-img" width="672">
+</div>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="dry-bean" class="level3" data-number="14.1.5">
+<h3 data-number="14.1.5" class="anchored" data-anchor-id="dry-bean"><span class="header-section-number">14.1.5</span> Dry Bean</h3>
+<ul>
+<li>URL to the data: <a href="https://archive.ics.uci.edu/dataset/602/dry+bean+dataset" class="uri">https://archive.ics.uci.edu/dataset/602/dry+bean+dataset</a></li>
+<li>Description: Images of 13,611 grains of 7 different registered dry beans were taken with a high-resolution camera. A total of 16 features; 12 dimensions and 4 shape forms, were obtained from the grains.</li>
+<li>Number of instances: 13,611</li>
+<li>Features: 16</li>
+<li>References: <span class="citation" data-cites="misc_dry_bean_602"><span>“<span>Dry Bean</span>”</span> (<a href="references.html#ref-misc_dry_bean_602" role="doc-biblioref">2020</a>)</span></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>name <span class="ot">&lt;-</span> <span class="st">"drybean"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The dataset needs to be download.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code to download the data</summary>
+<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="st">"data"</span>)) <span class="fu">dir.create</span>(<span class="st">"data"</span>)</span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a><span class="fu">download.file</span>(</span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">url =</span> <span class="st">"https://archive.ics.uci.edu/static/public/602/dry+bean+dataset.zip"</span>, </span>
+<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">destfile =</span> <span class="fu">str_c</span>(<span class="st">"data/"</span>, name, <span class="st">".zip"</span>)</span>
+<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>Then, we can import the dataset:</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code to import the data</summary>
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="fu">dir.create</span>(<span class="st">"data/drybean/"</span>)</span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a><span class="fu">system</span>(<span class="st">"unzip data/drybean.zip -d data/drybean/"</span>)</span>
+<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a>tb_drybean <span class="ot">&lt;-</span> readxl<span class="sc">::</span><span class="fu">read_excel</span>(</span>
+<span id="cb42-4"><a href="#cb42-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">path =</span> <span class="st">"data/drybean/DryBeanDataset/Dry_Bean_Dataset.xlsx"</span></span>
+<span id="cb42-5"><a href="#cb42-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb42-6"><a href="#cb42-6" aria-hidden="true" tabindex="-1"></a><span class="fu">system</span>(<span class="st">"rm -rf data/drybean"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>The target variable is <code>sex</code>. Let us turn it in a <span class="math inline">\(\{0,1\}\)</span> variable.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>tb_drybean <span class="ot">&lt;-</span> tb_drybean <span class="sc">|&gt;</span> </span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">is_dermason =</span> <span class="fu">ifelse</span>(Class <span class="sc">==</span> <span class="st">"DERMASON"</span>, <span class="dv">1</span>, <span class="dv">0</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>Class)</span>
+<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a>target_name <span class="ot">&lt;-</span> <span class="st">"is_dermason"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Let us call the <code class="sourceCode r"><span class="fu">get_beta_fit</span>()</code> from <a href="book_real_example.html" class="quarto-xref">Chapter&nbsp;<span>13</span></a> to get our priors.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>priors_drybean <span class="ot">&lt;-</span> <span class="fu">get_beta_fit</span>(</span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">dataset =</span> tb_drybean, <span class="at">target_name =</span> target_name, <span class="at">seed =</span> <span class="dv">1234</span></span>
+<span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Let us save the results and the dataset:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(priors_drybean, <span class="at">file =</span> <span class="st">"output/real-data/priors_drybean.rda"</span>)</span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(tb_drybean, <span class="at">file =</span> <span class="st">"output/real-data/tb_drybean.rda"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_hist_scores_beta</span>(priors_drybean, <span class="st">"drybean"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div id="fig-example-beta-drybean" class="quarto-figure quarto-figure-center quarto-float anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-fig" id="fig-example-beta-drybean-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;14.5: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the Dry Bean dataset.
+</figcaption>
+<div aria-describedby="fig-example-beta-drybean-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="book_real_beta_files/figure-html/fig-example-beta-drybean-1.png" class="img-fluid figure-img" width="672">
+</div>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="in-vehicle-coupon-recommendation" class="level3" data-number="14.1.6">
+<h3 data-number="14.1.6" class="anchored" data-anchor-id="in-vehicle-coupon-recommendation"><span class="header-section-number">14.1.6</span> In-Vehicle Coupon Recommendation</h3>
+<ul>
+<li>URL to the data: <a href="https://archive.ics.uci.edu/dataset/603/in+vehicle+coupon+recommendation" class="uri">https://archive.ics.uci.edu/dataset/603/in+vehicle+coupon+recommendation</a></li>
+<li>Description: This data studies whether a person will accept the coupon recommended to him in different driving scenarios.</li>
+<li>Number of instances: 12,684</li>
+<li>Features: 25</li>
+<li>References: <span class="citation" data-cites="misc_vehicle_coupon_recommendation_603"><span>“<span>In-Vehicle Coupon Recommendation</span>”</span> (<a href="references.html#ref-misc_vehicle_coupon_recommendation_603" role="doc-biblioref">2020</a>)</span></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a>name <span class="ot">&lt;-</span> <span class="st">"coupon"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The dataset needs to be download.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code to download the data</summary>
+<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="st">"data"</span>)) <span class="fu">dir.create</span>(<span class="st">"data"</span>)</span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a><span class="fu">download.file</span>(</span>
+<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">url =</span> <span class="fu">str_c</span>(<span class="st">"https://archive.ics.uci.edu/static/public/603/"</span>, </span>
+<span id="cb48-4"><a href="#cb48-4" aria-hidden="true" tabindex="-1"></a>              <span class="st">"in+vehicle+coupon+recommendation.zip"</span>), </span>
+<span id="cb48-5"><a href="#cb48-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">destfile =</span> <span class="fu">str_c</span>(<span class="st">"data/"</span>, name, <span class="st">".zip"</span>)</span>
+<span id="cb48-6"><a href="#cb48-6" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>Then, we can import the dataset:</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code to import the data</summary>
+<div class="sourceCode cell-code" id="cb49"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a>tb_coupon <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(</span>
+<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">file =</span> <span class="fu">unz</span>(<span class="fu">str_c</span>(<span class="st">"data/"</span>, name, <span class="st">".zip"</span>), <span class="st">"in-vehicle-coupon-recommendation.csv"</span>),</span>
+<span id="cb49-3"><a href="#cb49-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">show_col_types =</span> <span class="cn">FALSE</span></span>
+<span id="cb49-4"><a href="#cb49-4" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>The target variable is <code>y</code> (1 if the person accepted the coupon, 0 otherwise).</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a>tb_coupon <span class="ot">&lt;-</span> </span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a>  tb_coupon <span class="sc">|&gt;</span> </span>
+<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb50-4"><a href="#cb50-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">temperature =</span> <span class="fu">as.factor</span>(temperature),</span>
+<span id="cb50-5"><a href="#cb50-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">has_children =</span> <span class="fu">as.factor</span>(has_children),</span>
+<span id="cb50-6"><a href="#cb50-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">toCoupon_GEQ15min =</span> <span class="fu">as.factor</span>(toCoupon_GEQ15min),</span>
+<span id="cb50-7"><a href="#cb50-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">toCoupon_GEQ25min =</span> <span class="fu">as.factor</span>(toCoupon_GEQ25min),</span>
+<span id="cb50-8"><a href="#cb50-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">direction_same =</span> <span class="fu">as.factor</span>(direction_same)</span>
+<span id="cb50-9"><a href="#cb50-9" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span> </span>
+<span id="cb50-10"><a href="#cb50-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>toCoupon_GEQ5min, <span class="sc">-</span>direction_opp, <span class="sc">-</span>car) <span class="sc">|&gt;</span> </span>
+<span id="cb50-11"><a href="#cb50-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">y =</span> Y)</span>
+<span id="cb50-12"><a href="#cb50-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-13"><a href="#cb50-13" aria-hidden="true" tabindex="-1"></a>tb_coupon <span class="ot">&lt;-</span> <span class="fu">na.omit</span>(tb_coupon)</span>
+<span id="cb50-14"><a href="#cb50-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-15"><a href="#cb50-15" aria-hidden="true" tabindex="-1"></a>target_name <span class="ot">&lt;-</span> <span class="st">"y"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Let us call the <code class="sourceCode r"><span class="fu">get_beta_fit</span>()</code> from <a href="book_real_example.html" class="quarto-xref">Chapter&nbsp;<span>13</span></a> to get our priors.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a>priors_coupon <span class="ot">&lt;-</span> <span class="fu">get_beta_fit</span>(</span>
+<span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">dataset =</span> tb_coupon, <span class="at">target_name =</span> target_name, <span class="at">seed =</span> <span class="dv">1234</span></span>
+<span id="cb51-3"><a href="#cb51-3" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Let us save the results and the dataset:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb52"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(priors_coupon, <span class="at">file =</span> <span class="st">"output/real-data/priors_coupon.rda"</span>)</span>
+<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(tb_coupon, <span class="at">file =</span> <span class="st">"output/real-data/tb_coupon.rda"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb53"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_hist_scores_beta</span>(priors_coupon, <span class="st">"coupon"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div id="fig-example-beta-coupon" class="quarto-figure quarto-figure-center quarto-float anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-fig" id="fig-example-beta-coupon-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;14.6: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the In-Vehicle Coupon Recommendation dataset.
+</figcaption>
+<div aria-describedby="fig-example-beta-coupon-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="book_real_beta_files/figure-html/fig-example-beta-coupon-1.png" class="img-fluid figure-img" width="672">
+</div>
+</figure>
+</div>
+</div>
+</div>
+<!-- ### Letter Recognition -->
+<!-- URL to the data: <https://archive.ics.uci.edu/dataset/59/letter+recognition> -->
+<!-- Description: Database of character image features; try to identify the letter. -->
+<!-- Number of instances: 20,000 -->
+<!-- Features: 16 -->
+<!-- ```{r define-name-letterecognition} -->
+<!-- name <- "letterecognition" -->
+<!-- ``` -->
+<!-- The dataset needs to be download. -->
+<!-- ```{r download-letterecognition, eval=FALSE} -->
+<!-- #| code-fold: true -->
+<!-- #| code-summary: Code to download the data -->
+<!-- if (!dir.exists("data")) dir.create("data") -->
+<!-- download.file( -->
+<!--   url = "https://archive.ics.uci.edu/static/public/59/letter+recognition.zip",  -->
+<!--   destfile = str_c("data/", name, ".zip") -->
+<!-- ) -->
+<!-- ``` -->
+<!-- Then, we can import the dataset: -->
+<!-- ```{r import-letterecognition-data} -->
+<!-- #| code-fold: true -->
+<!-- #| code-summary: Code to import the data -->
+<!-- tb_letterecognition <- read_csv( -->
+<!--   file = unz(str_c("data/", name, ".zip"), "letter-recognition.data"),  -->
+<!--   col_names = c( -->
+<!--     "lettr", "x-box", "y-box", "width", "high", "onpix", "x-bar", "y-bar",  -->
+<!--     "x2bar", "y2bar", "xybar", "x2ybr", "xy2br", "x-ege", "xegvy", "y-ege",  -->
+<!--     "yegvx" -->
+<!--   ), -->
+<!--   show_col_types = FALSE -->
+<!-- ) -->
+<!-- ``` -->
+<!-- The target variable is `lettr`. Let us turn create a $\{0,1\}$` variable where whe predict whether the letter is "U" or not. -->
+<!-- ```{r tb_letterecognition-target} -->
+<!-- tb_letterecognition <-  -->
+<!--   tb_letterecognition |>  -->
+<!--   mutate(across(where(is.numeric), ~as.factor(.x))) |>  -->
+<!--   mutate(is_u = ifelse(lettr == "U", 1, 0)) |>  -->
+<!--   select(-lettr) -->
+<!-- target_name <- "is_u" -->
+<!-- ``` -->
+<!-- Let us call the `get_beta_fit()`{.R} from [Chapter -@sec-real-example] to get our priors. -->
+<!-- ```{r estim-letterecognition, eval=FALSE} -->
+<!-- priors_letterecognition <- get_beta_fit( -->
+<!--   dataset = tb_letterecognition, target_name = target_name, seed = 1234 -->
+<!-- ) -->
+<!-- ``` -->
+<!-- Let us save the results and the dataset: -->
+<!-- ```{r, eval=FALSE} -->
+<!-- save(priors_letterecognition, file = "output/real-data/priors_letterecognition.rda") -->
+<!-- save(tb_letterecognition, file = "output/real-data/tb_letterecognition.rda") -->
+<!-- ``` -->
+<!-- ```{r, echo=FALSE} -->
+<!-- load("output/real-data/priors_letterecognition.rda") -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- #| fig-cap: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the Letter Recognition dataset. -->
+<!-- #| label: fig-example-beta-letterecognition -->
+<!-- plot_hist_scores_beta(priors_letterecognition, "letterecognition") -->
+<!-- ``` -->
+</section>
+<section id="mushroom" class="level3" data-number="14.1.7">
+<h3 data-number="14.1.7" class="anchored" data-anchor-id="mushroom"><span class="header-section-number">14.1.7</span> Mushroom</h3>
+<ul>
+<li>URL to the data: <a href="https://archive.ics.uci.edu/dataset/73/mushroom" class="uri">https://archive.ics.uci.edu/dataset/73/mushroom</a></li>
+<li>Description: From Audobon Society Field Guide; mushrooms described in terms of physical characteristics; classification: poisonous or edible.</li>
+<li>Number of instances: 8,124</li>
+<li>Features: 22</li>
+<li>References: <span class="citation" data-cites="misc_mushroom_73"><span>“<span>Mushroom</span>”</span> (<a href="references.html#ref-misc_mushroom_73" role="doc-biblioref">1987</a>)</span></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb54"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a>name <span class="ot">&lt;-</span> <span class="st">"mushroom"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The dataset needs to be download.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code to download the data</summary>
+<div class="sourceCode cell-code" id="cb55"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="st">"data"</span>)) <span class="fu">dir.create</span>(<span class="st">"data"</span>)</span>
+<span id="cb55-2"><a href="#cb55-2" aria-hidden="true" tabindex="-1"></a><span class="fu">download.file</span>(</span>
+<span id="cb55-3"><a href="#cb55-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">url =</span> <span class="fu">str_c</span>(<span class="st">"https://archive.ics.uci.edu/static/public/73/mushroom.zip"</span>), </span>
+<span id="cb55-4"><a href="#cb55-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">destfile =</span> <span class="fu">str_c</span>(<span class="st">"data/"</span>, name, <span class="st">".zip"</span>)</span>
+<span id="cb55-5"><a href="#cb55-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>Then, we can import the dataset:</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code to import the data</summary>
+<div class="sourceCode cell-code" id="cb56"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a>tb_mushroom <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(</span>
+<span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">file =</span> <span class="fu">unz</span>(<span class="fu">str_c</span>(<span class="st">"data/"</span>, name, <span class="st">".zip"</span>), <span class="st">"agaricus-lepiota.data"</span>), </span>
+<span id="cb56-3"><a href="#cb56-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">col_names =</span> <span class="fu">c</span>(</span>
+<span id="cb56-4"><a href="#cb56-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">"edible"</span>,</span>
+<span id="cb56-5"><a href="#cb56-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">"cap_shape"</span>, <span class="st">"cap_surface"</span>, <span class="st">"cap_color"</span>, <span class="st">"bruises"</span>, <span class="st">"odor"</span>, </span>
+<span id="cb56-6"><a href="#cb56-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">"gill_attachment"</span>, <span class="st">"gill_spacing"</span>, <span class="st">"gill_size"</span>, <span class="st">"gill_color"</span>, </span>
+<span id="cb56-7"><a href="#cb56-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">"stalk_shape"</span>, <span class="st">"stalk_root"</span>, <span class="st">"stalk_surface_above_ring"</span>,</span>
+<span id="cb56-8"><a href="#cb56-8" aria-hidden="true" tabindex="-1"></a>    <span class="st">"stalk_surface_below_ring"</span>, <span class="st">"stalk_color_above_ring"</span>, </span>
+<span id="cb56-9"><a href="#cb56-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">"stalk_color_below_ring"</span>, <span class="st">"veil_type"</span>, <span class="st">"veil_color"</span>, <span class="st">"ring_number"</span>, </span>
+<span id="cb56-10"><a href="#cb56-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">"ring_type"</span>, <span class="st">"spore_print_color"</span>, <span class="st">"population"</span>, <span class="st">"habitat"</span></span>
+<span id="cb56-11"><a href="#cb56-11" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb56-12"><a href="#cb56-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">show_col_types =</span> <span class="cn">FALSE</span></span>
+<span id="cb56-13"><a href="#cb56-13" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>The target variable is <code>edible</code>. Let us turn it in a <span class="math inline">\(\{0,1\}\)</span> variable.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb57"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a>tb_mushroom <span class="ot">&lt;-</span> tb_mushroom <span class="sc">|&gt;</span> </span>
+<span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">bruises =</span> <span class="fu">ifelse</span>(bruises <span class="sc">==</span> <span class="cn">TRUE</span>, <span class="st">"yes"</span>, <span class="st">"no"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb57-3"><a href="#cb57-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">edible =</span> <span class="fu">ifelse</span>(edible <span class="sc">==</span> <span class="st">"e"</span>, <span class="dv">1</span>, <span class="dv">0</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb57-4"><a href="#cb57-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>veil_type)</span>
+<span id="cb57-5"><a href="#cb57-5" aria-hidden="true" tabindex="-1"></a>target_name <span class="ot">&lt;-</span> <span class="st">"edible"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Let us call the <code class="sourceCode r"><span class="fu">get_beta_fit</span>()</code> from <a href="book_real_example.html" class="quarto-xref">Chapter&nbsp;<span>13</span></a> to get our priors.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb58"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a>priors_mushroom <span class="ot">&lt;-</span> <span class="fu">get_beta_fit</span>(</span>
+<span id="cb58-2"><a href="#cb58-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">dataset =</span> tb_mushroom, <span class="at">target_name =</span> target_name, <span class="at">seed =</span> <span class="dv">1234</span></span>
+<span id="cb58-3"><a href="#cb58-3" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Let us save the results and the dataset:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb59"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(priors_mushroom, <span class="at">file =</span> <span class="st">"output/real-data/priors_mushroom.rda"</span>)</span>
+<span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(tb_mushroom, <span class="at">file =</span> <span class="st">"output/real-data/tb_mushroom.rda"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb60"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_hist_scores_beta</span>(priors_mushroom, <span class="st">"mushroom"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div id="fig-example-beta-mushroom" class="quarto-figure quarto-figure-center quarto-float anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-fig" id="fig-example-beta-mushroom-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;14.7: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the Mushroom dataset.
+</figcaption>
+<div aria-describedby="fig-example-beta-mushroom-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="book_real_beta_files/figure-html/fig-example-beta-mushroom-1.png" class="img-fluid figure-img" width="672">
+</div>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="occupancy-detection" class="level3" data-number="14.1.8">
+<h3 data-number="14.1.8" class="anchored" data-anchor-id="occupancy-detection"><span class="header-section-number">14.1.8</span> Occupancy Detection</h3>
+<ul>
+<li>URL to the data: <a href="https://archive.ics.uci.edu/dataset/357/occupancy+detection" class="uri">https://archive.ics.uci.edu/dataset/357/occupancy+detection</a></li>
+<li>Description: Predict the age of occupancy from physical measurements.</li>
+<li>Number of instances: 20,560</li>
+<li>Features: 6</li>
+<li>References: <span class="citation" data-cites="misc_occupancy_detection__357">Candanedo (<a href="references.html#ref-misc_occupancy_detection__357" role="doc-biblioref">2016</a>)</span></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb61"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a>name <span class="ot">&lt;-</span> <span class="st">"occupancy"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The dataset needs to be download.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code to download the data</summary>
+<div class="sourceCode cell-code" id="cb62"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb62-1"><a href="#cb62-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="st">"data"</span>)) <span class="fu">dir.create</span>(<span class="st">"data"</span>)</span>
+<span id="cb62-2"><a href="#cb62-2" aria-hidden="true" tabindex="-1"></a><span class="fu">download.file</span>(</span>
+<span id="cb62-3"><a href="#cb62-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">url =</span> <span class="fu">str_c</span>(<span class="st">"https://archive.ics.uci.edu/static/public/357/"</span>,</span>
+<span id="cb62-4"><a href="#cb62-4" aria-hidden="true" tabindex="-1"></a>              <span class="st">"occupancy+detection.zip"</span>), </span>
+<span id="cb62-5"><a href="#cb62-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">destfile =</span> <span class="fu">str_c</span>(<span class="st">"data/"</span>, name, <span class="st">".zip"</span>)</span>
+<span id="cb62-6"><a href="#cb62-6" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>Then, we can import the dataset:</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code to import the data</summary>
+<div class="sourceCode cell-code" id="cb63"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a>tb_occupancy <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(</span>
+<span id="cb63-2"><a href="#cb63-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">file =</span> <span class="fu">unz</span>(<span class="fu">str_c</span>(<span class="st">"data/"</span>, name, <span class="st">".zip"</span>), <span class="st">"datatraining.txt"</span>), </span>
+<span id="cb63-3"><a href="#cb63-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">col_names =</span> <span class="fu">c</span>(</span>
+<span id="cb63-4"><a href="#cb63-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">"id"</span>, <span class="st">"date"</span>,<span class="st">"Temperature"</span>,<span class="st">"Humidity"</span>,<span class="st">"Light"</span>,<span class="st">"CO2"</span>,</span>
+<span id="cb63-5"><a href="#cb63-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">"HumidityRatio"</span>,<span class="st">"Occupancy"</span></span>
+<span id="cb63-6"><a href="#cb63-6" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb63-7"><a href="#cb63-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">show_col_types =</span> <span class="cn">FALSE</span>, <span class="at">skip =</span> <span class="dv">1</span></span>
+<span id="cb63-8"><a href="#cb63-8" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span> </span>
+<span id="cb63-9"><a href="#cb63-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bind_rows</span>(</span>
+<span id="cb63-10"><a href="#cb63-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">read_csv</span>(</span>
+<span id="cb63-11"><a href="#cb63-11" aria-hidden="true" tabindex="-1"></a>      <span class="at">file =</span> <span class="fu">unz</span>(<span class="fu">str_c</span>(<span class="st">"data/"</span>, name, <span class="st">".zip"</span>), <span class="st">"datatest.txt"</span>), </span>
+<span id="cb63-12"><a href="#cb63-12" aria-hidden="true" tabindex="-1"></a>      <span class="at">col_names =</span> <span class="fu">c</span>(</span>
+<span id="cb63-13"><a href="#cb63-13" aria-hidden="true" tabindex="-1"></a>        <span class="st">"id"</span>, <span class="st">"date"</span>,<span class="st">"Temperature"</span>,<span class="st">"Humidity"</span>,<span class="st">"Light"</span>,<span class="st">"CO2"</span>,</span>
+<span id="cb63-14"><a href="#cb63-14" aria-hidden="true" tabindex="-1"></a>        <span class="st">"HumidityRatio"</span>,<span class="st">"Occupancy"</span></span>
+<span id="cb63-15"><a href="#cb63-15" aria-hidden="true" tabindex="-1"></a>      ),</span>
+<span id="cb63-16"><a href="#cb63-16" aria-hidden="true" tabindex="-1"></a>      <span class="at">show_col_types =</span> <span class="cn">FALSE</span>, <span class="at">skip =</span> <span class="dv">1</span>,</span>
+<span id="cb63-17"><a href="#cb63-17" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb63-18"><a href="#cb63-18" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span> </span>
+<span id="cb63-19"><a href="#cb63-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bind_rows</span>(</span>
+<span id="cb63-20"><a href="#cb63-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">read_csv</span>(</span>
+<span id="cb63-21"><a href="#cb63-21" aria-hidden="true" tabindex="-1"></a>      <span class="at">file =</span> <span class="fu">unz</span>(<span class="fu">str_c</span>(<span class="st">"data/"</span>, name, <span class="st">".zip"</span>), <span class="st">"datatest2.txt"</span>), </span>
+<span id="cb63-22"><a href="#cb63-22" aria-hidden="true" tabindex="-1"></a>      <span class="at">show_col_types =</span> <span class="cn">FALSE</span>, <span class="at">skip =</span> <span class="dv">1</span>,</span>
+<span id="cb63-23"><a href="#cb63-23" aria-hidden="true" tabindex="-1"></a>      <span class="at">col_names =</span> <span class="fu">c</span>(</span>
+<span id="cb63-24"><a href="#cb63-24" aria-hidden="true" tabindex="-1"></a>        <span class="st">"id"</span>, <span class="st">"date"</span>,<span class="st">"Temperature"</span>,<span class="st">"Humidity"</span>,<span class="st">"Light"</span>,<span class="st">"CO2"</span>,</span>
+<span id="cb63-25"><a href="#cb63-25" aria-hidden="true" tabindex="-1"></a>        <span class="st">"HumidityRatio"</span>,<span class="st">"Occupancy"</span></span>
+<span id="cb63-26"><a href="#cb63-26" aria-hidden="true" tabindex="-1"></a>      ),</span>
+<span id="cb63-27"><a href="#cb63-27" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb63-28"><a href="#cb63-28" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span> </span>
+<span id="cb63-29"><a href="#cb63-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>id)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>The target variable is <code>Occupancy</code>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb64"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb64-1"><a href="#cb64-1" aria-hidden="true" tabindex="-1"></a>tb_occupancy <span class="ot">&lt;-</span> tb_occupancy <span class="sc">|&gt;</span> </span>
+<span id="cb64-2"><a href="#cb64-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>date)</span>
+<span id="cb64-3"><a href="#cb64-3" aria-hidden="true" tabindex="-1"></a>target_name <span class="ot">&lt;-</span> <span class="st">"Occupancy"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Let us call the <code class="sourceCode r"><span class="fu">get_beta_fit</span>()</code> from <a href="book_real_example.html" class="quarto-xref">Chapter&nbsp;<span>13</span></a> to get our priors.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb65"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a>priors_occupancy <span class="ot">&lt;-</span> <span class="fu">get_beta_fit</span>(</span>
+<span id="cb65-2"><a href="#cb65-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">dataset =</span> tb_occupancy, <span class="at">target_name =</span> target_name, <span class="at">seed =</span> <span class="dv">1234</span></span>
+<span id="cb65-3"><a href="#cb65-3" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Let us save the results and the dataset:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb66"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb66-1"><a href="#cb66-1" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(priors_occupancy, <span class="at">file =</span> <span class="st">"output/real-data/priors_occupancy.rda"</span>)</span>
+<span id="cb66-2"><a href="#cb66-2" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(tb_occupancy, <span class="at">file =</span> <span class="st">"output/real-data/tb_occupancy.rda"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb67"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_hist_scores_beta</span>(priors_occupancy, <span class="st">"occupancy"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div id="fig-example-beta-occupancy" class="quarto-figure quarto-figure-center quarto-float anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-fig" id="fig-example-beta-occupancy-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;14.8: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the Occupancy Detection dataset.
+</figcaption>
+<div aria-describedby="fig-example-beta-occupancy-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="book_real_beta_files/figure-html/fig-example-beta-occupancy-1.png" class="img-fluid figure-img" width="672">
+</div>
+</figure>
+</div>
+</div>
+</div>
+<!-- ### Online Shoppers Purchasing Intention -->
+<!-- URL to the data: <https://archive.ics.uci.edu/dataset/468/online+shoppers+purchasing+intention+dataset> -->
+<!-- Description: Of the 12,330 sessions in the dataset, 84.5% (10,422) were negative class samples that did not end with shopping, and the rest (1908) were positive class samples ending with shopping. -->
+<!-- Number of instances: 12,330 -->
+<!-- Features: 17 -->
+<!-- ```{r define-name-onlineshoppers} -->
+<!-- name <- "onlineshoppers" -->
+<!-- ``` -->
+<!-- The dataset needs to be download. -->
+<!-- ```{r download-onlineshoppers, eval=FALSE} -->
+<!-- #| code-fold: true -->
+<!-- #| code-summary: Code to download the data -->
+<!-- if (!dir.exists("data")) dir.create("data") -->
+<!-- download.file( -->
+<!--   url = str_c("https://archive.ics.uci.edu/static/public/468/", -->
+<!--               "online+shoppers+purchasing+intention+dataset.zip"),  -->
+<!--   destfile = str_c("data/", name, ".zip") -->
+<!-- ) -->
+<!-- ``` -->
+<!-- Then, we can import the dataset: -->
+<!-- ```{r import-onlineshoppers-data} -->
+<!-- #| code-fold: true -->
+<!-- #| code-summary: Code to import the data -->
+<!-- tb_onlineshoppers <- read_csv( -->
+<!--   file = unz(str_c("data/", name, ".zip"), "online_shoppers_intention.csv"), -->
+<!--   show_col_types = FALSE -->
+<!-- ) -->
+<!-- ``` -->
+<!-- The target variable is `sex`. Let us turn it in a $\{0,1\}$` variable. -->
+<!-- ```{r tb_onlineshoppers-target} -->
+<!-- tb_onlineshoppers <-  -->
+<!--   tb_onlineshoppers |>  -->
+<!--   mutate(across(where(is.character), ~as.factor(.x))) |>  -->
+<!--   mutate(across(where(is.logical), ~as.factor(.x))) |>  -->
+<!--   mutate(across(all_of(c( -->
+<!--     "Administrative", "OperatingSystems", "Browser", "Region" -->
+<!--   )), ~as.factor(.x))) |>  -->
+<!--   mutate((across(all_of(c( -->
+<!--     "Informational", "SpecialDay", "TrafficType", "Informational_Duration", -->
+<!--     "Administrative_Duration", "PageValues", "BounceRates", "ProductRelated_Duration", "ProductRelated", "ExitRates" -->
+<!--   )), ~jitter(.x, 0.1))) -->
+<!--   ) |>  -->
+<!--   mutate(Revenue = ifelse(Revenue == TRUE, 1, 0)) |>  -->
+<!--   rename(revenue = Revenue) -->
+<!-- target_name <- "revenue" -->
+<!-- ``` -->
+<!-- Let us call the `get_beta_fit()`{.R} from [Chapter -@sec-real-example] to get our priors. -->
+<!-- ```{r estim-onlineshoppers, eval=FALSE} -->
+<!-- priors_onlineshoppers <- get_beta_fit( -->
+<!--   dataset = tb_onlineshoppers, target_name = target_name, seed = 1234 -->
+<!-- ) -->
+<!-- ``` -->
+<!-- Let us save the results and the dataset: -->
+<!-- ```{r, eval=FALSE} -->
+<!-- save(priors_onlineshoppers, file = "output/real-data/priors_onlineshoppers.rda") -->
+<!-- save(tb_onlineshoppers, file = "output/real-data/tb_onlineshoppers.rda") -->
+<!-- ``` -->
+<!-- ```{r, echo=FALSE} -->
+<!-- load("output/real-data/priors_onlineshoppers.rda") -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- #| fig-cap: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the Online Shoppers Purchasing Intention dataset. -->
+<!-- #| label: fig-example-beta-onlineshoppers -->
+<!-- plot_hist_scores_beta(priors_onlineshoppers, "onlineshoppers") -->
+<!-- ``` -->
+<!-- ### Online News Popularity -->
+<!-- URL to the data: <https://archive.ics.uci.edu/dataset/332/online+news+popularity> -->
+<!-- Description: Predict the age of newspopularity from physical measurements. -->
+<!-- Number of instances: 39,797 -->
+<!-- Features: 58 -->
+<!-- ```{r define-name-newspopularity} -->
+<!-- name <- "newspopularity" -->
+<!-- ``` -->
+<!-- The dataset needs to be download. -->
+<!-- ```{r download-newspopularity, eval=FALSE} -->
+<!-- #| code-fold: true -->
+<!-- #| code-summary: Code to download the data -->
+<!-- if (!dir.exists("data")) dir.create("data") -->
+<!-- download.file( -->
+<!--   url = str_c("https://archive.ics.uci.edu/static/public/332/", -->
+<!--               "online+news+popularity.zip"),  -->
+<!--   destfile = str_c("data/", name, ".zip") -->
+<!-- ) -->
+<!-- ``` -->
+<!-- Then, we can import the dataset: -->
+<!-- ```{r import-newspopularity-data} -->
+<!-- #| code-fold: true -->
+<!-- #| code-summary: Code to import the data -->
+<!-- dir.create("data/newspopularity") -->
+<!-- unzip("data/newspopularity.zip", exdir = "data/newspopularity") -->
+<!-- tb_newspopularity <- read_csv( -->
+<!--   file = str_c("data/newspopularity/OnlineNewsPopularity/", -->
+<!--                "OnlineNewsPopularity.csv"),  -->
+<!--   show_col_types = FALSE -->
+<!-- ) -->
+<!-- system("rm -rf data/newspopularity") -->
+<!-- ``` -->
+<!-- We define the target variable, `high_shares` as a binary variable which is equal to 1 if the number of shares is higher than the median value found in the sample, and 0 otherwise. -->
+<!-- ```{r tb_newspopularity-target} -->
+<!-- tb_newspopularity <-  -->
+<!--   tb_newspopularity |>  -->
+<!--   select(-url) |>  -->
+<!--   mutate( -->
+<!--     across( -->
+<!--       all_of(c( -->
+<!--         "data_channel_is_lifestyle", "data_channel_is_entertainment", -->
+<!--         "data_channel_is_bus", "data_channel_is_socmed",  -->
+<!--         "data_channel_is_tech", "data_channel_is_world", -->
+<!--         "weekday_is_monday", "weekday_is_tuesday", "weekday_is_wednesday", -->
+<!--         "weekday_is_thursday", "weekday_is_friday", "weekday_is_saturday", "is_weekend" -->
+<!--       )), -->
+<!--       ~as.factor(.x) -->
+<!--     ), -->
+<!--     high_shares = ifelse(shares > median(shares), yes = 1, no = 0), -->
+<!--     across(all_of(c( -->
+<!--       "n_non_stop_words", "num_keywords", "kw_min_min", "n_tokens_title", "kw_max_max", "min_positive_polarity", "max_positive_polarity", "max_negative_polarity", "num_self_hrefs", "num_imgs", "num_hrefs" -->
+<!--       )), ~jitter(.x, factor = 0.01)) -->
+<!--   ) |>  -->
+<!--   select( -->
+<!--     -shares, -weekday_is_sunday, -is_weekend, -global_rate_positive_words, -->
+<!--     -global_rate_negative_words, -rate_positive_words, -abs_title_subjectivity, -->
+<!--     -abs_title_sentiment_polarity -->
+<!--   ) -->
+<!-- target_name <- "high_shares" -->
+<!-- ``` -->
+<!-- Let us call the `get_beta_fit()`{.R} from [Chapter -@sec-real-example] to get our priors. -->
+<!-- ```{r estim-newspopularity, eval=FALSE} -->
+<!-- priors_newspopularity <- get_beta_fit( -->
+<!--   dataset = tb_newspopularity, target_name = target_name, seed = 1234 -->
+<!-- ) -->
+<!-- ``` -->
+<!-- Let us save the results and the dataset: -->
+<!-- ```{r, eval=FALSE} -->
+<!-- save(priors_newspopularity, file = "output/real-data/priors_newspopularity.rda") -->
+<!-- save(tb_newspopularity, file = "output/real-data/tb_newspopularity.rda") -->
+<!-- ``` -->
+<!-- ```{r, echo=FALSE} -->
+<!-- load("output/real-data/priors_newspopularity.rda") -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- #| fig-cap: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the Online News Popularity dataset. -->
+<!-- #| label: fig-example-beta-newspopularity -->
+<!-- plot_hist_scores_beta(priors_newspopularity, "newspopularity") -->
+<!-- ``` -->
+</section>
+<section id="wine-quality" class="level3" data-number="14.1.9">
+<h3 data-number="14.1.9" class="anchored" data-anchor-id="wine-quality"><span class="header-section-number">14.1.9</span> Wine Quality</h3>
+<ul>
+<li>URL to the data: <a href="https://archive.ics.uci.edu/dataset/186/wine+quality" class="uri">https://archive.ics.uci.edu/dataset/186/wine+quality</a></li>
+<li>Description: Two datasets are included, related to red and white vinho verde wine samples, from the north of Portugal. The goal is to model wine quality based on physicochemical tests (see [Cortez et al., 2009], http://www3.dsi.uminho.pt/pcortez/wine/).</li>
+<li>Number of instances: 4,898</li>
+<li>Features: 11</li>
+<li>References: <span class="citation" data-cites="misc_wine_quality_186">Cortez et al. (<a href="references.html#ref-misc_wine_quality_186" role="doc-biblioref">2009</a>)</span></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb68"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb68-1"><a href="#cb68-1" aria-hidden="true" tabindex="-1"></a>name <span class="ot">&lt;-</span> <span class="st">"winequality"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The dataset needs to be download.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code to download the data</summary>
+<div class="sourceCode cell-code" id="cb69"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="st">"data"</span>)) <span class="fu">dir.create</span>(<span class="st">"data"</span>)</span>
+<span id="cb69-2"><a href="#cb69-2" aria-hidden="true" tabindex="-1"></a><span class="fu">download.file</span>(</span>
+<span id="cb69-3"><a href="#cb69-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">url =</span> <span class="fu">str_c</span>(<span class="st">"https://archive.ics.uci.edu/static/public/186/"</span>,</span>
+<span id="cb69-4"><a href="#cb69-4" aria-hidden="true" tabindex="-1"></a>              <span class="st">"wine+quality.zip"</span>), </span>
+<span id="cb69-5"><a href="#cb69-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">destfile =</span> <span class="fu">str_c</span>(<span class="st">"data/"</span>, name, <span class="st">".zip"</span>)</span>
+<span id="cb69-6"><a href="#cb69-6" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>Then, we can import the dataset:</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code to import the data</summary>
+<div class="sourceCode cell-code" id="cb70"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb70-1"><a href="#cb70-1" aria-hidden="true" tabindex="-1"></a>red_wine <span class="ot">&lt;-</span> <span class="fu">read_csv2</span>(</span>
+<span id="cb70-2"><a href="#cb70-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">file =</span> <span class="fu">unz</span>(<span class="fu">str_c</span>(<span class="st">"data/"</span>, name, <span class="st">".zip"</span>), <span class="st">"winequality-red.csv"</span>),</span>
+<span id="cb70-3"><a href="#cb70-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">show_col_types =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb70-4"><a href="#cb70-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">wine_type =</span> <span class="st">"red"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stderr">
+<pre><code>ℹ Using "','" as decimal and "'.'" as grouping mark. Use `read_delim()` for more control.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: One or more parsing issues, call `problems()` on your data frame for details,
+e.g.:
+  dat &lt;- vroom(...)
+  problems(dat)</code></pre>
+</div>
+<details class="code-fold">
+<summary>Code to import the data</summary>
+<div class="sourceCode cell-code" id="cb73"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb73-1"><a href="#cb73-1" aria-hidden="true" tabindex="-1"></a>white_wine <span class="ot">&lt;-</span> <span class="fu">read_csv2</span>(</span>
+<span id="cb73-2"><a href="#cb73-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">file =</span> <span class="fu">unz</span>(<span class="fu">str_c</span>(<span class="st">"data/"</span>, name, <span class="st">".zip"</span>), <span class="st">"winequality-white.csv"</span>),</span>
+<span id="cb73-3"><a href="#cb73-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">show_col_types =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb73-4"><a href="#cb73-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">wine_type =</span> <span class="st">"white"</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb73-5"><a href="#cb73-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="st">`</span><span class="at">residual sugar</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">as.numeric</span>(<span class="st">`</span><span class="at">residual sugar</span><span class="st">`</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stderr">
+<pre><code>ℹ Using "','" as decimal and "'.'" as grouping mark. Use `read_delim()` for more control.</code></pre>
+</div>
+</div>
+<p>The target variable is <code>quality</code>. Let us use it to define a <span class="math inline">\(\{0,1\}\)</span> variable. We define the variable <code>high_quality</code> which equals 1 if the quality is larger or equal than 6.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb75"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb75-1"><a href="#cb75-1" aria-hidden="true" tabindex="-1"></a>tb_winequality <span class="ot">&lt;-</span> red_wine <span class="sc">|&gt;</span> <span class="fu">bind_rows</span>(white_wine) <span class="sc">|&gt;</span> </span>
+<span id="cb75-2"><a href="#cb75-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">high_quality =</span> <span class="fu">ifelse</span>(quality <span class="sc">&gt;=</span> <span class="dv">6</span>, <span class="dv">1</span>, <span class="dv">0</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb75-3"><a href="#cb75-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">all_of</span>(<span class="fu">c</span>(</span>
+<span id="cb75-4"><a href="#cb75-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">"density"</span>, <span class="st">"chlorides"</span>, <span class="st">"volatile acidity"</span>, <span class="st">"sulphates"</span>, <span class="st">"citric acid"</span></span>
+<span id="cb75-5"><a href="#cb75-5" aria-hidden="true" tabindex="-1"></a>    )), <span class="sc">~</span><span class="fu">as.numeric</span>(.x))) <span class="sc">|&gt;</span> </span>
+<span id="cb75-6"><a href="#cb75-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>quality)</span>
+<span id="cb75-7"><a href="#cb75-7" aria-hidden="true" tabindex="-1"></a>tb_winequality <span class="ot">&lt;-</span> <span class="fu">na.omit</span>(tb_winequality)</span>
+<span id="cb75-8"><a href="#cb75-8" aria-hidden="true" tabindex="-1"></a>target_name <span class="ot">&lt;-</span> <span class="st">"high_quality"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Let us call the <code class="sourceCode r"><span class="fu">get_beta_fit</span>()</code> from <a href="book_real_example.html" class="quarto-xref">Chapter&nbsp;<span>13</span></a> to get our priors.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb76"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb76-1"><a href="#cb76-1" aria-hidden="true" tabindex="-1"></a>priors_winequality <span class="ot">&lt;-</span> <span class="fu">get_beta_fit</span>(</span>
+<span id="cb76-2"><a href="#cb76-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">dataset =</span> tb_winequality, <span class="at">target_name =</span> target_name, <span class="at">seed =</span> <span class="dv">1234</span></span>
+<span id="cb76-3"><a href="#cb76-3" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Let us save the results and the dataset:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb77"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb77-1"><a href="#cb77-1" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(priors_winequality, <span class="at">file =</span> <span class="st">"output/real-data/priors_winequality.rda"</span>)</span>
+<span id="cb77-2"><a href="#cb77-2" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(tb_winequality, <span class="at">file =</span> <span class="st">"output/real-data/tb_winequality.rda"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb78"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb78-1"><a href="#cb78-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_hist_scores_beta</span>(priors_winequality, <span class="st">"winequality"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div id="fig-example-beta-winequality" class="quarto-figure quarto-figure-center quarto-float anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-fig" id="fig-example-beta-winequality-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;14.9: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the Wine Quality dataset.
+</figcaption>
+<div aria-describedby="fig-example-beta-winequality-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="book_real_beta_files/figure-html/fig-example-beta-winequality-1.png" class="img-fluid figure-img" width="672">
+</div>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="spambase" class="level3" data-number="14.1.10">
+<h3 data-number="14.1.10" class="anchored" data-anchor-id="spambase"><span class="header-section-number">14.1.10</span> Spambase</h3>
+<ul>
+<li>URL to the data: <a href="https://archive.ics.uci.edu/dataset/94/spambase" class="uri">https://archive.ics.uci.edu/dataset/94/spambase</a></li>
+<li>Description: Classifying Email as Spam or Non-Spam</li>
+<li>Number of instances: 4,601</li>
+<li>Features: 57</li>
+<li>References: <span class="citation" data-cites="misc_spambase_94">Hopkins et al. (<a href="references.html#ref-misc_spambase_94" role="doc-biblioref">1999</a>)</span></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb79"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb79-1"><a href="#cb79-1" aria-hidden="true" tabindex="-1"></a>name <span class="ot">&lt;-</span> <span class="st">"spambase"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The dataset needs to be download.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code to download the data</summary>
+<div class="sourceCode cell-code" id="cb80"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb80-1"><a href="#cb80-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="st">"data"</span>)) <span class="fu">dir.create</span>(<span class="st">"data"</span>)</span>
+<span id="cb80-2"><a href="#cb80-2" aria-hidden="true" tabindex="-1"></a><span class="fu">download.file</span>(</span>
+<span id="cb80-3"><a href="#cb80-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">url =</span> <span class="fu">str_c</span>(<span class="st">"https://archive.ics.uci.edu/static/public/2/"</span>, name, <span class="st">".zip"</span>), </span>
+<span id="cb80-4"><a href="#cb80-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">destfile =</span> <span class="fu">str_c</span>(<span class="st">"data/"</span>, name, <span class="st">".zip"</span>)</span>
+<span id="cb80-5"><a href="#cb80-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb80-6"><a href="#cb80-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb80-7"><a href="#cb80-7" aria-hidden="true" tabindex="-1"></a>info_data <span class="ot">&lt;-</span> <span class="fu">scan</span>(</span>
+<span id="cb80-8"><a href="#cb80-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">unz</span>(<span class="fu">str_c</span>(<span class="st">"data/"</span>, name, <span class="st">".zip"</span>), <span class="fu">str_c</span>(name, <span class="st">".names"</span>)), </span>
+<span id="cb80-9"><a href="#cb80-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">what =</span> <span class="st">"character"</span>, <span class="at">sep =</span> <span class="st">"</span><span class="sc">\n</span><span class="st">"</span></span>
+<span id="cb80-10"><a href="#cb80-10" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb80-11"><a href="#cb80-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Print the names for this dataset (not very convenient...)</span></span>
+<span id="cb80-12"><a href="#cb80-12" aria-hidden="true" tabindex="-1"></a><span class="fu">str_extract</span>(info_data[<span class="dv">94</span><span class="sc">:</span><span class="fu">length</span>(info_data)], <span class="st">"^(.*):"</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb80-13"><a href="#cb80-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">str_remove</span>(<span class="st">":$"</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb80-14"><a href="#cb80-14" aria-hidden="true" tabindex="-1"></a>  (\(.x) <span class="fu">str_c</span>(<span class="st">'"'</span>, .x, <span class="st">'",'</span>))() <span class="sc">|&gt;</span> </span>
+<span id="cb80-15"><a href="#cb80-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>Then, we can import the dataset:</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code to import the data</summary>
+<div class="sourceCode cell-code" id="cb81"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb81-1"><a href="#cb81-1" aria-hidden="true" tabindex="-1"></a>tb_spambase <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(</span>
+<span id="cb81-2"><a href="#cb81-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">file =</span> <span class="fu">unz</span>(<span class="fu">str_c</span>(<span class="st">"data/"</span>, name, <span class="st">".zip"</span>), <span class="fu">str_c</span>(name, <span class="st">".data"</span>)),</span>
+<span id="cb81-3"><a href="#cb81-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">col_names =</span> <span class="fu">c</span>(</span>
+<span id="cb81-4"><a href="#cb81-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">"word_freq_make"</span>, <span class="st">"word_freq_address"</span>, <span class="st">"word_freq_all"</span>, <span class="st">"word_freq_3d"</span>,</span>
+<span id="cb81-5"><a href="#cb81-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">"word_freq_our"</span>, <span class="st">"word_freq_over"</span>, <span class="st">"word_freq_remove"</span>, <span class="st">"word_freq_internet"</span>,</span>
+<span id="cb81-6"><a href="#cb81-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">"word_freq_order"</span>, <span class="st">"word_freq_mail"</span>, <span class="st">"word_freq_receive"</span>, <span class="st">"word_freq_will"</span>,</span>
+<span id="cb81-7"><a href="#cb81-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">"word_freq_people"</span>, <span class="st">"word_freq_report"</span>, <span class="st">"word_freq_addresses"</span>,</span>
+<span id="cb81-8"><a href="#cb81-8" aria-hidden="true" tabindex="-1"></a>    <span class="st">"word_freq_free"</span>, <span class="st">"word_freq_business"</span>, <span class="st">"word_freq_email"</span>, <span class="st">"word_freq_you"</span>,</span>
+<span id="cb81-9"><a href="#cb81-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">"word_freq_credit"</span>, <span class="st">"word_freq_your"</span>, <span class="st">"word_freq_font"</span>, <span class="st">"word_freq_000"</span>,</span>
+<span id="cb81-10"><a href="#cb81-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">"word_freq_money"</span>, <span class="st">"word_freq_hp"</span>, <span class="st">"word_freq_hpl"</span>, <span class="st">"word_freq_george"</span>,</span>
+<span id="cb81-11"><a href="#cb81-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">"word_freq_650"</span>, <span class="st">"word_freq_lab"</span>, <span class="st">"word_freq_labs"</span>, <span class="st">"word_freq_telnet"</span>,</span>
+<span id="cb81-12"><a href="#cb81-12" aria-hidden="true" tabindex="-1"></a>    <span class="st">"word_freq_857"</span>, <span class="st">"word_freq_data"</span>, <span class="st">"word_freq_415"</span>, <span class="st">"word_freq_85"</span>,</span>
+<span id="cb81-13"><a href="#cb81-13" aria-hidden="true" tabindex="-1"></a>    <span class="st">"word_freq_technology"</span>, <span class="st">"word_freq_1999"</span>, <span class="st">"word_freq_parts"</span>, <span class="st">"word_freq_pm"</span>,</span>
+<span id="cb81-14"><a href="#cb81-14" aria-hidden="true" tabindex="-1"></a>    <span class="st">"word_freq_direct"</span>, <span class="st">"word_freq_cs"</span>, <span class="st">"word_freq_meeting"</span>,</span>
+<span id="cb81-15"><a href="#cb81-15" aria-hidden="true" tabindex="-1"></a>    <span class="st">"word_freq_original"</span>, <span class="st">"word_freq_project"</span>, <span class="st">"word_freq_re"</span>, <span class="st">"word_freq_edu"</span>,</span>
+<span id="cb81-16"><a href="#cb81-16" aria-hidden="true" tabindex="-1"></a>    <span class="st">"word_freq_table"</span>, <span class="st">"word_freq_conference"</span>, <span class="st">"char_freq_;"</span>, <span class="st">"char_freq_("</span>,</span>
+<span id="cb81-17"><a href="#cb81-17" aria-hidden="true" tabindex="-1"></a>    <span class="st">"char_freq_["</span>, <span class="st">"char_freq_!"</span>, <span class="st">"char_freq_$"</span>, <span class="st">"char_freq_#"</span>,</span>
+<span id="cb81-18"><a href="#cb81-18" aria-hidden="true" tabindex="-1"></a>    <span class="st">"capital_run_length_average"</span>, <span class="st">"capital_run_length_longest"</span>,</span>
+<span id="cb81-19"><a href="#cb81-19" aria-hidden="true" tabindex="-1"></a>    <span class="st">"capital_run_length_total"</span>, <span class="st">"is_spam"</span></span>
+<span id="cb81-20"><a href="#cb81-20" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb81-21"><a href="#cb81-21" aria-hidden="true" tabindex="-1"></a>  <span class="at">show_col_types =</span> <span class="cn">FALSE</span></span>
+<span id="cb81-22"><a href="#cb81-22" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>The target variable:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb82"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb82-1"><a href="#cb82-1" aria-hidden="true" tabindex="-1"></a>target_name <span class="ot">&lt;-</span> <span class="st">"is_spam"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Let us call the <code class="sourceCode r"><span class="fu">get_beta_fit</span>()</code> from <a href="book_real_example.html" class="quarto-xref">Chapter&nbsp;<span>13</span></a> to get our priors.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb83"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb83-1"><a href="#cb83-1" aria-hidden="true" tabindex="-1"></a>priors_spambase <span class="ot">&lt;-</span> <span class="fu">get_beta_fit</span>(</span>
+<span id="cb83-2"><a href="#cb83-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">dataset =</span> tb_spambase, <span class="at">target_name =</span> target_name, <span class="at">seed =</span> <span class="dv">1234</span></span>
+<span id="cb83-3"><a href="#cb83-3" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Let us save the results and the dataset:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb84"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb84-1"><a href="#cb84-1" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(priors_spambase, <span class="at">file =</span> <span class="fu">str_c</span>(<span class="st">"output/real-data/priors_spambase.rda"</span>))</span>
+<span id="cb84-2"><a href="#cb84-2" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(tb_spambase, <span class="at">file =</span> <span class="st">"output/real-data/tb_spambase.rda"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb85"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb85-1"><a href="#cb85-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_hist_scores_beta</span>(priors_spambase, <span class="st">"spambase"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div id="fig-example-beta-spambase" class="quarto-figure quarto-figure-center quarto-float anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-fig" id="fig-example-beta-spambase-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;14.10: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the spambase dataset.
+</figcaption>
+<div aria-describedby="fig-example-beta-spambase-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="book_real_beta_files/figure-html/fig-example-beta-spambase-1.png" class="img-fluid figure-img" width="672">
+</div>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="summary" class="level2" data-number="14.2">
+<h2 data-number="14.2" class="anchored" data-anchor-id="summary"><span class="header-section-number">14.2</span> Summary</h2>
+<div class="cell">
+<details class="code-fold">
+<summary>Codes to get the key characteristics of the datasets</summary>
+<div class="sourceCode cell-code" id="cb86"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb86-1"><a href="#cb86-1" aria-hidden="true" tabindex="-1"></a>datasets <span class="ot">&lt;-</span> <span class="fu">tribble</span>(</span>
+<span id="cb86-2"><a href="#cb86-2" aria-hidden="true" tabindex="-1"></a>  <span class="sc">~</span>name, <span class="sc">~</span>target_name, <span class="sc">~</span>reference,</span>
+<span id="cb86-3"><a href="#cb86-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">"abalone"</span>, <span class="st">"Sex"</span>, <span class="st">"@misc_abalone_1"</span>,</span>
+<span id="cb86-4"><a href="#cb86-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">"adult"</span>, <span class="st">"high_income"</span>, <span class="st">"@misc_adult_2"</span>,</span>
+<span id="cb86-5"><a href="#cb86-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">"bank"</span>, <span class="st">"y"</span>, <span class="st">"@misc_bank_marketing_222"</span>,</span>
+<span id="cb86-6"><a href="#cb86-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">"default"</span>, <span class="st">"default"</span>, <span class="st">"@misc_default_of_credit_card_clients_350"</span>,</span>
+<span id="cb86-7"><a href="#cb86-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">"drybean"</span>, <span class="st">"is_dermason"</span>, <span class="st">"@misc_dry_bean_602"</span>,</span>
+<span id="cb86-8"><a href="#cb86-8" aria-hidden="true" tabindex="-1"></a>  <span class="st">"coupon"</span>, <span class="st">"y"</span>, <span class="st">"@misc_vehicle_coupon_recommendation_603"</span>,</span>
+<span id="cb86-9"><a href="#cb86-9" aria-hidden="true" tabindex="-1"></a>  <span class="st">"mushroom"</span>, <span class="st">"edible"</span>, <span class="st">"@misc_mushroom_73"</span>,</span>
+<span id="cb86-10"><a href="#cb86-10" aria-hidden="true" tabindex="-1"></a>  <span class="st">"occupancy"</span>, <span class="st">"Occupancy"</span>, <span class="st">"@misc_occupancy_detection__357"</span>,</span>
+<span id="cb86-11"><a href="#cb86-11" aria-hidden="true" tabindex="-1"></a>  <span class="st">"winequality"</span>, <span class="st">"high_quality"</span>, <span class="st">"@misc_wine_quality_186"</span>,</span>
+<span id="cb86-12"><a href="#cb86-12" aria-hidden="true" tabindex="-1"></a>  <span class="st">"spambase"</span>, <span class="st">"is_spam"</span>, <span class="st">"@misc_spambase_94"</span></span>
+<span id="cb86-13"><a href="#cb86-13" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb86-14"><a href="#cb86-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb86-15"><a href="#cb86-15" aria-hidden="true" tabindex="-1"></a>dataset_info <span class="ot">&lt;-</span> <span class="fu">vector</span>(<span class="at">mode =</span> <span class="st">"list"</span>, <span class="at">length =</span> <span class="fu">nrow</span>(datasets))</span>
+<span id="cb86-16"><a href="#cb86-16" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(datasets)) {</span>
+<span id="cb86-17"><a href="#cb86-17" aria-hidden="true" tabindex="-1"></a>  name <span class="ot">&lt;-</span> datasets<span class="sc">$</span>name[i]</span>
+<span id="cb86-18"><a href="#cb86-18" aria-hidden="true" tabindex="-1"></a>  target_name <span class="ot">&lt;-</span> datasets<span class="sc">$</span>target_name[i]</span>
+<span id="cb86-19"><a href="#cb86-19" aria-hidden="true" tabindex="-1"></a>  current_data <span class="ot">&lt;-</span> <span class="fu">get</span>(<span class="fu">str_c</span>(<span class="st">'tb_'</span>, name))</span>
+<span id="cb86-20"><a href="#cb86-20" aria-hidden="true" tabindex="-1"></a>  current_target <span class="ot">&lt;-</span> current_data <span class="sc">|&gt;</span> <span class="fu">pull</span>(<span class="sc">!!</span>target_name)</span>
+<span id="cb86-21"><a href="#cb86-21" aria-hidden="true" tabindex="-1"></a>  current_ref <span class="ot">&lt;-</span> datasets<span class="sc">$</span>reference[i]</span>
+<span id="cb86-22"><a href="#cb86-22" aria-hidden="true" tabindex="-1"></a>  n <span class="ot">&lt;-</span> <span class="fu">nrow</span>(current_data)</span>
+<span id="cb86-23"><a href="#cb86-23" aria-hidden="true" tabindex="-1"></a>  n_col <span class="ot">&lt;-</span> <span class="fu">ncol</span>(current_data)</span>
+<span id="cb86-24"><a href="#cb86-24" aria-hidden="true" tabindex="-1"></a>  n_numeric <span class="ot">&lt;-</span> current_data <span class="sc">|&gt;</span> <span class="fu">select</span>(<span class="sc">-!!</span>target_name) <span class="sc">|&gt;</span> </span>
+<span id="cb86-25"><a href="#cb86-25" aria-hidden="true" tabindex="-1"></a>    <span class="fu">select</span>(<span class="fu">where</span>(is.numeric)) <span class="sc">|&gt;</span> </span>
+<span id="cb86-26"><a href="#cb86-26" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ncol</span>()</span>
+<span id="cb86-27"><a href="#cb86-27" aria-hidden="true" tabindex="-1"></a>  dataset_info[[i]] <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb86-28"><a href="#cb86-28" aria-hidden="true" tabindex="-1"></a>    <span class="at">Dataset =</span> name, </span>
+<span id="cb86-29"><a href="#cb86-29" aria-hidden="true" tabindex="-1"></a>    <span class="at">n =</span> n, </span>
+<span id="cb86-30"><a href="#cb86-30" aria-hidden="true" tabindex="-1"></a>    <span class="st">`</span><span class="at"># features</span><span class="st">`</span> <span class="ot">=</span> n_col<span class="dv">-1</span>,</span>
+<span id="cb86-31"><a href="#cb86-31" aria-hidden="true" tabindex="-1"></a>    <span class="st">`</span><span class="at"># numeric features</span><span class="st">`</span> <span class="ot">=</span> n_numeric,</span>
+<span id="cb86-32"><a href="#cb86-32" aria-hidden="true" tabindex="-1"></a>    <span class="st">`</span><span class="at">Prop. target = 1</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">round</span>(<span class="fu">sum</span>(current_target <span class="sc">==</span> <span class="dv">1</span>) <span class="sc">/</span> n, <span class="dv">2</span>),</span>
+<span id="cb86-33"><a href="#cb86-33" aria-hidden="true" tabindex="-1"></a>    <span class="at">Reference =</span> current_ref</span>
+<span id="cb86-34"><a href="#cb86-34" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb86-35"><a href="#cb86-35" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb86-36"><a href="#cb86-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb86-37"><a href="#cb86-37" aria-hidden="true" tabindex="-1"></a>dataset_info <span class="ot">&lt;-</span> <span class="fu">list_rbind</span>(dataset_info)</span>
+<span id="cb86-38"><a href="#cb86-38" aria-hidden="true" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(dataset_info, <span class="at">booktabs =</span> <span class="cn">TRUE</span>, <span class="at">format.args =</span> <span class="fu">list</span>(<span class="at">big.mark =</span> <span class="st">","</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div id="tbl-datasets-characteristics" class="cell quarto-float anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-datasets-characteristics-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;14.1: Key characteristics of the datasets.
+</figcaption>
+<div aria-describedby="tbl-datasets-characteristics-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output-display">
+<table class="do-not-create-environment cell table table-sm table-striped small">
+<colgroup>
+<col style="width: 11%">
+<col style="width: 6%">
+<col style="width: 10%">
+<col style="width: 17%">
+<col style="width: 15%">
+<col style="width: 38%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Dataset</th>
+<th style="text-align: right;">n</th>
+<th style="text-align: right;"># features</th>
+<th style="text-align: right;"># numeric features</th>
+<th style="text-align: right;">Prop. target = 1</th>
+<th style="text-align: left;">Reference</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">abalone</td>
+<td style="text-align: right;">4,177</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">0.37</td>
+<td style="text-align: left;"><span class="citation" data-cites="misc_abalone_1">Nash et al. (<a href="references.html#ref-misc_abalone_1" role="doc-biblioref">1995</a>)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">adult</td>
+<td style="text-align: right;">32,561</td>
+<td style="text-align: right;">14</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">0.24</td>
+<td style="text-align: left;"><span class="citation" data-cites="misc_adult_2">Becker and Kohavi (<a href="references.html#ref-misc_adult_2" role="doc-biblioref">1996</a>)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">bank</td>
+<td style="text-align: right;">45,211</td>
+<td style="text-align: right;">16</td>
+<td style="text-align: right;">7</td>
+<td style="text-align: right;">0.12</td>
+<td style="text-align: left;"><span class="citation" data-cites="misc_bank_marketing_222">Moro, Rita, and Cortez (<a href="references.html#ref-misc_bank_marketing_222" role="doc-biblioref">2012</a>)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">default</td>
+<td style="text-align: right;">30,000</td>
+<td style="text-align: right;">23</td>
+<td style="text-align: right;">14</td>
+<td style="text-align: right;">0.22</td>
+<td style="text-align: left;"><span class="citation" data-cites="misc_default_of_credit_card_clients_350">Yeh (<a href="references.html#ref-misc_default_of_credit_card_clients_350" role="doc-biblioref">2016</a>)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">drybean</td>
+<td style="text-align: right;">13,611</td>
+<td style="text-align: right;">16</td>
+<td style="text-align: right;">16</td>
+<td style="text-align: right;">0.26</td>
+<td style="text-align: left;"><span class="citation" data-cites="misc_dry_bean_602"><span>“<span>Dry Bean</span>”</span> (<a href="references.html#ref-misc_dry_bean_602" role="doc-biblioref">2020</a>)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">coupon</td>
+<td style="text-align: right;">12,079</td>
+<td style="text-align: right;">22</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.57</td>
+<td style="text-align: left;"><span class="citation" data-cites="misc_vehicle_coupon_recommendation_603"><span>“<span>In-Vehicle Coupon Recommendation</span>”</span> (<a href="references.html#ref-misc_vehicle_coupon_recommendation_603" role="doc-biblioref">2020</a>)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">mushroom</td>
+<td style="text-align: right;">8,124</td>
+<td style="text-align: right;">21</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.52</td>
+<td style="text-align: left;"><span class="citation" data-cites="misc_mushroom_73"><span>“<span>Mushroom</span>”</span> (<a href="references.html#ref-misc_mushroom_73" role="doc-biblioref">1987</a>)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">occupancy</td>
+<td style="text-align: right;">20,560</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">0.23</td>
+<td style="text-align: left;"><span class="citation" data-cites="misc_occupancy_detection__357">Candanedo (<a href="references.html#ref-misc_occupancy_detection__357" role="doc-biblioref">2016</a>)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">winequality</td>
+<td style="text-align: right;">6,495</td>
+<td style="text-align: right;">12</td>
+<td style="text-align: right;">11</td>
+<td style="text-align: right;">0.63</td>
+<td style="text-align: left;"><span class="citation" data-cites="misc_wine_quality_186">Cortez et al. (<a href="references.html#ref-misc_wine_quality_186" role="doc-biblioref">2009</a>)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">spambase</td>
+<td style="text-align: right;">4,601</td>
+<td style="text-align: right;">57</td>
+<td style="text-align: right;">57</td>
+<td style="text-align: right;">0.39</td>
+<td style="text-align: left;"><span class="citation" data-cites="misc_spambase_94">Hopkins et al. (<a href="references.html#ref-misc_spambase_94" role="doc-biblioref">1999</a>)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+
+
+<div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" role="list" style="display: none">
+<div id="ref-misc_adult_2" class="csl-entry" role="listitem">
+Becker, Barry, and Ronny Kohavi. 1996. <span>“<span>Adult</span>.”</span> UCI Machine Learning Repository.
+</div>
+<div id="ref-misc_occupancy_detection__357" class="csl-entry" role="listitem">
+Candanedo, Luis. 2016. <span>“<span>Occupancy Detection </span>.”</span> UCI Machine Learning Repository.
+</div>
+<div id="ref-misc_wine_quality_186" class="csl-entry" role="listitem">
+Cortez, Paulo, A. Cerdeira, F. Almeida, T. Matos, and J. Reis. 2009. <span>“<span>Wine Quality</span>.”</span> UCI Machine Learning Repository.
+</div>
+<div id="ref-misc_dry_bean_602" class="csl-entry" role="listitem">
+<span>“<span>Dry Bean</span>.”</span> 2020. UCI Machine Learning Repository.
+</div>
+<div id="ref-misc_spambase_94" class="csl-entry" role="listitem">
+Hopkins, Mark, Erik Reeber, George Forman, and Jaap Suermondt. 1999. <span>“<span>Spambase</span>.”</span> UCI Machine Learning Repository.
+</div>
+<div id="ref-misc_vehicle_coupon_recommendation_603" class="csl-entry" role="listitem">
+<span>“<span>In-Vehicle Coupon Recommendation</span>.”</span> 2020. UCI Machine Learning Repository.
+</div>
+<div id="ref-misc_bank_marketing_222" class="csl-entry" role="listitem">
+Moro, S., P. Rita, and P. Cortez. 2012. <span>“<span>Bank Marketing</span>.”</span> UCI Machine Learning Repository.
+</div>
+<div id="ref-misc_mushroom_73" class="csl-entry" role="listitem">
+<span>“<span>Mushroom</span>.”</span> 1987. UCI Machine Learning Repository.
+</div>
+<div id="ref-misc_abalone_1" class="csl-entry" role="listitem">
+Nash, Warwick, Tracy Sellers, Simon Talbot, Andrew Cawthorn, and Wes Ford. 1995. <span>“<span>Abalone</span>.”</span> UCI Machine Learning Repository.
+</div>
+<div id="ref-misc_default_of_credit_card_clients_350" class="csl-entry" role="listitem">
+Yeh, I-Cheng. 2016. <span>“<span class="nocase">Default of Credit Card Clients</span>.”</span> UCI Machine Learning Repository.
+</div>
+</div>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./book_real_example.html" class="pagination-link" aria-label="Priors: Illustration">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Priors: Illustration</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./book_real_estimations.html" class="pagination-link" aria-label="Estimations">
+        <span class="nav-page-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Estimations</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+    <script type="text/javascript">
+    (function(d) {
+      d.querySelectorAll(".pseudocode-container").forEach(function(el) {
+        let pseudocodeOptions = {
+          indentSize: el.dataset.indentSize || "1.2em",
+          commentDelimiter: el.dataset.commentDelimiter || "//",
+          lineNumber: el.dataset.lineNumber === "true" ? true : false,
+          lineNumberPunc: el.dataset.lineNumberPunc || ":",
+          noEnd: el.dataset.noEnd === "true" ? true : false,
+          titlePrefix: el.dataset.algTitle || "Algorithm"
+        };
+        pseudocode.renderElement(el.querySelector(".pseudocode"), pseudocodeOptions);
+      });
+    })(document);
+    (function(d) {
+      d.querySelectorAll(".pseudocode-container").forEach(function(el) {
+        titleSpan = el.querySelector(".ps-root > .ps-algorithm > .ps-line > .ps-keyword")
+        titlePrefix = el.dataset.algTitle;
+        titleIndex = el.dataset.chapterLevel ? el.dataset.chapterLevel + "." + el.dataset.pseudocodeIndex : el.dataset.pseudocodeIndex;
+        titleSpan.innerHTML = titlePrefix + " " + titleIndex + " ";
+      });
+    })(document);
+    </script>
+  
+
+
+
+
+</body></html>

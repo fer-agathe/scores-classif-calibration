@@ -1,0 +1,1045 @@
+# Random Forests: number of trees {#sec-random-forests-ntrees}
+
+
+:::{.callout-note}
+
+This chapter, following on from [Chapter -@sec-random-forests], investigates the impact of the number of trees on performance and calibration.
+:::
+
+```{r load-libraries}
+library(tidyverse)
+library(ggh4x)
+library(rpart)
+library(locfit)
+library(philentropy)
+
+# Colours for train/validation/test
+colour_samples <- c(
+  "Train" = "#0072B2",
+  "Validation" = "#009E73",
+  "Test" = "#D55E00"
+)
+```
+
+
+
+```{r define-theme_paper}
+#| code-fold: true
+#| code-summary: definition of the `theme_paper()` function (for ggplot2 graphs)
+#' Theme for ggplot2
+#'
+#' @param ... arguments passed to the theme function
+#' @export
+#' @importFrom ggplot2 element_rect element_text element_blank element_line unit
+#'   rel
+theme_paper <- function (...) {
+  ggthemes::theme_base() +
+    theme(
+      plot.background = element_blank(),
+      legend.background = element_rect(
+        fill = "transparent", linetype="solid", colour ="black"),
+      legend.position = "bottom",
+      legend.direction = "horizontal",
+      legend.box = "horizontal",
+      legend.key = element_blank()
+    )
+}
+```
+
+## Data
+
+We generate data using the first 12 scenarios from @Ojeda_2023 and an additional set of 4 scenarios in which the true probability does not depend on the predictors in a linear way (see [Chapter -@sec-data-ojeda]).
+
+```{r source-data-ojeda}
+source("functions/data-ojeda.R")
+library(ks)
+source("functions/subsample_target_distribution.R")
+```
+
+When we simulate a dataset, we draw the following number of observations:
+```{r define-nb_obs}
+nb_obs <- 10000
+```
+
+
+
+```{r}
+#| code-fold: true
+#| code-summary: Definition of the 16 scenarios
+# Coefficients beta
+coefficients <- list(
+  # First category (baseline, 2 covariates)
+  c(0.5, 1),  # scenario 1, 0 noise variable
+  c(0.5, 1),  # scenario 2, 10 noise variables
+  c(0.5, 1),  # scenario 3, 50 noise variables
+  c(0.5, 1),  # scenario 4, 100 noise variables
+  # Second category (same as baseline, with lower number of 1s)
+  c(0.5, 1),  # scenario 5, 0 noise variable
+  c(0.5, 1),  # scenario 6, 10 noise variables
+  c(0.5, 1),  # scenario 7, 50 noise variables
+  c(0.5, 1),  # scenario 8, 100 noise variables
+  # Third category (same as baseline but with 5 num. and 5 categ. covariates)
+  c(0.1, 0.2, 0.3, 0.4, 0.5, 0.01, 0.02, 0.03, 0.04, 0.05),
+  c(0.1, 0.2, 0.3, 0.4, 0.5, 0.01, 0.02, 0.03, 0.04, 0.05),
+  c(0.1, 0.2, 0.3, 0.4, 0.5, 0.01, 0.02, 0.03, 0.04, 0.05),
+  c(0.1, 0.2, 0.3, 0.4, 0.5, 0.01, 0.02, 0.03, 0.04, 0.05),
+  # Fourth category (nonlinear predictor, 3 covariates)
+  c(0.5, 1, .3),  # scenario 5, 0 noise variable
+  c(0.5, 1, .3),  # scenario 6, 10 noise variables
+  c(0.5, 1, .3),  # scenario 7, 50 noise variables
+  c(0.5, 1, .3)  # scenario 8, 100 noise variables
+)
+
+# Mean parameter for the normal distribution to draw from to draw num covariates
+mean_num <- list(
+  # First category (baseline, 2 covariates)
+  rep(0, 2),  # scenario 1, 0 noise variable
+  rep(0, 2),  # scenario 2, 10 noise variables
+  rep(0, 2),  # scenario 3, 50 noise variables
+  rep(0, 2),  # scenario 4, 100 noise variables
+  # Second category (same as baseline, with lower number of 1s)
+  rep(0, 2),  # scenario 5, 0 noise variable
+  rep(0, 2),  # scenario 6, 10 noise variables
+  rep(0, 2),  # scenario 7, 50 noise variables
+  rep(0, 2),  # scenario 8, 100 noise variables
+  # Third category (same as baseline but with 5 num. and 5 categ. covariates)
+  rep(0, 5),
+  rep(0, 5),
+  rep(0, 5),
+  rep(0, 5),
+  # Fourth category (nonlinear predictor, 3 covariates)
+  rep(0, 3),
+  rep(0, 3),
+  rep(0, 3),
+  rep(0, 3)
+)
+# Sd parameter for the normal distribution to draw from to draw num covariates
+sd_num <- list(
+  # First category (baseline, 2 covariates)
+  rep(1, 2),  # scenario 1, 0 noise variable
+  rep(1, 2),  # scenario 2, 10 noise variables
+  rep(1, 2),  # scenario 3, 50 noise variables
+  rep(1, 2),  # scenario 4, 100 noise variables
+  # Second category (same as baseline, with lower number of 1s)
+  rep(1, 2),  # scenario 5, 0 noise variable
+  rep(1, 2),  # scenario 6, 10 noise variables
+  rep(1, 2),  # scenario 7, 50 noise variables
+  rep(1, 2),  # scenario 8, 100 noise variables
+  # Third category (same as baseline but with 5 num. and 5 categ. covariates)
+  rep(1, 5),
+  rep(1, 5),
+  rep(1, 5),
+  rep(1, 5),
+  # Fourth category (nonlinear predictor, 3 covariates)
+  rep(1, 3),
+  rep(1, 3),
+  rep(1, 3),
+  rep(1, 3)
+)
+
+params_df <- tibble(
+  scenario = 1:16,
+  coefficients = coefficients,
+  n_num = c(rep(2, 8), rep(5, 4), rep(3, 4)),
+  add_categ = c(rep(FALSE, 8), rep(TRUE, 4), rep(FALSE, 4)),
+  n_noise = rep(c(0, 10, 50, 100), 4),
+  mean_num = mean_num,
+  sd_num = sd_num,
+  size_train = rep(nb_obs, 16),
+  size_valid = rep(nb_obs, 16),
+  size_test = rep(nb_obs, 16),
+  transform_probs = c(rep(FALSE, 4), rep(TRUE, 4), rep(FALSE, 4), rep(FALSE, 4)),
+  linear_predictor = c(rep(TRUE, 12), rep(FALSE, 4)),
+  seed = 202105
+)
+rm(coefficients, mean_num, sd_num)
+```
+
+
+## Metrics
+
+We load the functions from [Chapter -@sec-metrics] to compute performance, calibration and divergence metrics.
+
+```{r source-metrics}
+source("functions/metrics.R")
+```
+
+## Simulations Setup
+
+
+We train different forests using the {ranger} package.
+
+```{r}
+library(ranger)
+```
+
+For each of the 16 scenarios, we will train regression forests. We will consider the following hyperparameters:
+
+- `num_trees`: the number of trees in the forest: 1, 2, or 5 (was 250 in [Chapter -@sec-random-forests]).
+- `mtry`: Number of variables to possibly split at in each node: 2, 4 or 10.
+- `min_node_size`: Minimal node size to split at. Varying values between 2 and `r max(params_df$size_train)`.
+
+```{r define-grid, echo=FALSE}
+min_bucket_values <- unique(round(2^seq(1, 14, by = .4)))
+min_bucket_values <- min_bucket_values[min_bucket_values <=  max(params_df$size_train)]
+
+grid <- expand_grid(
+  mtry = c(2, 4, 10),
+  num_trees = c(1,2,5),
+  min_node_size = min_bucket_values,
+  type = c("regression")
+) |>
+  mutate(ind = row_number())
+```
+
+```{r, eval=FALSE}
+min_bucket_values <- unique(round(2^seq(1, 14, by = .4)))
+min_bucket_values <- min_bucket_values[min_bucket_values <=  max(params_df$size_train)]
+
+grid <- expand_grid(
+  mtry = c(2, 4, 10),
+  num_trees = c(1,2,5),
+  min_node_size = min_bucket_values
+) |>
+  mutate(ind = row_number())
+```
+
+
+The desired number of replications for each scenario needs to be set:
+```{r define-repns_vector}
+repns_vector <- 1:100
+```
+
+
+The different configurations are reported in @tbl-grid-values-rf.
+
+```{r, echo=FALSE}
+#| tbl-cap: "Grid Search Values"
+#| label: tbl-grid-values-rf
+grid |> filter(type == "regression") |> 
+  select(-type, -ind) |> 
+DT::datatable()
+```
+
+
+We define a function, `simul_forest()`{.R} to train a random forest on a dataset for a type of forest, with given hyperparameters (given to the function through the `param` argument). 
+
+```{r define-simul_forest}
+#| code-fold: true
+#| code-summary: Function `simul_forest()`{.R}
+#' Train a random forest and compute performance, calibration, and dispersion
+#' metrics
+#'
+#' @param params tibble with hyperparameters for the simulation
+#' @param ind index of the grid (numerical ID)
+#' @param simu_data simulated data obtained with `simulate_data_wrapper()`
+#'  for probability trees
+simul_forest <- function(params,
+                         ind,
+                         simu_data
+) {
+  tb_train <- simu_data$data$train |> rename(d = y)
+  tb_valid <- simu_data$data$valid |> rename(d = y)
+  tb_test <- simu_data$data$test |> rename(d = y)
+
+  true_prob <-
+    list(
+      train = simu_data$data$probs_train,
+      valid = simu_data$data$probs_valid,
+      test = simu_data$data$probs_test
+    )
+
+  ## Estimation----
+  fit_rf <- ranger(
+    d ~ .,
+    data = tb_train,
+    min.bucket = params$min_node_size,
+    mtry = params$mtry,
+    num.trees = params$num_trees
+  )
+
+  # Average number of leaves per trees in the forest
+  nb_leaves <- map_dbl(fit_rf$forest$child.nodeIDs, ~sum(pluck(.x, 1) == 0)) |>
+    mean()
+
+
+  ## Raw Scores----
+  # Predicted scores
+  scores_train <- predict(fit_rf, data = tb_train, type = "response")$predictions
+  scores_valid <- predict(fit_rf, data = tb_valid, type = "response")$predictions
+  scores_test <- predict(fit_rf, data = tb_test, type = "response")$predictions
+
+  ## Histogram of scores----
+  breaks <- seq(0, 1, by = .05)
+  scores_train_hist <- hist(scores_train, breaks = breaks, plot = FALSE)
+  scores_valid_hist <- hist(scores_valid, breaks = breaks, plot = FALSE)
+  scores_test_hist <- hist(scores_test, breaks = breaks, plot = FALSE)
+  scores_hist <- list(
+    train = scores_train_hist,
+    valid = scores_valid_hist,
+    test = scores_test_hist
+  )
+
+  ## Estimation of P(q1 < score < q2)----
+  proq_scores_train <- map(
+    c(.1, .2, .3, .4),
+    ~prop_btw_quantiles(s = scores_train, q1 = .x)
+  ) |>
+    list_rbind() |>
+    mutate(sample = "train")
+  proq_scores_valid <- map(
+    c(.1, .2, .3, .4),
+    ~prop_btw_quantiles(s = scores_valid, q1 = .x)
+  ) |>
+    list_rbind() |>
+    mutate(sample = "valid")
+  proq_scores_test <- map(
+    c(.1, .2, .3, .4),
+    ~prop_btw_quantiles(s = scores_test, q1 = .x)
+  ) |>
+    list_rbind() |>
+    mutate(sample = "test")
+
+  ## Dispersion Metrics----
+  disp_train <- dispersion_metrics(
+    true_probas = true_prob$train, scores = scores_train
+  ) |> mutate(sample = "train")
+
+  disp_valid <- dispersion_metrics(
+    true_probas = true_prob$valid, scores = scores_valid
+  ) |> mutate(sample = "valid")
+
+  disp_test <- dispersion_metrics(
+    true_probas = true_prob$test, scores = scores_test
+  ) |> mutate(sample = "test")
+
+  # Performance and Calibration Metrics
+  # We add very small noise to predicted scores
+  # otherwise the local regression may crash
+  scores_train_noise <- scores_train +
+    runif(n = length(scores_train), min = 0, max = 0.01)
+  scores_train_noise[scores_train_noise > 1] <- 1
+  metrics_train <- compute_metrics(
+    obs = tb_train$d, scores = scores_train_noise, true_probas = true_prob$train
+  ) |> mutate(sample = "train")
+
+  scores_valid_noise <- scores_valid +
+    runif(n = length(scores_valid), min = 0, max = 0.01)
+  scores_valid_noise[scores_valid_noise > 1] <- 1
+  metrics_valid <- compute_metrics(
+    obs = tb_valid$d, scores = scores_valid_noise, true_probas = true_prob$valid
+  ) |> mutate(sample = "valid")
+
+  scores_test_noise <- scores_test +
+    runif(n = length(scores_test), min = 0, max = 0.01)
+  scores_test_noise[scores_test_noise > 1] <- 1
+  metrics_test <- compute_metrics(
+    obs = tb_test$d, scores = scores_test_noise, true_probas = true_prob$test
+  ) |> mutate(sample = "test")
+
+  tb_metrics <- metrics_train |>
+    bind_rows(metrics_valid) |>
+    bind_rows(metrics_test) |>
+    mutate(
+      scenario = simu_data$scenario,
+      ind = ind,
+      repn = simu_data$repn,
+      min_bucket = params$min_node_size,
+      nb_leaves = nb_leaves,
+      prop_leaves = nb_leaves / nrow(tb_train)
+    )
+
+  tb_prop_scores <- proq_scores_train |>
+    bind_rows(proq_scores_valid) |>
+    bind_rows(proq_scores_test) |>
+    mutate(
+      scenario = simu_data$scenario,
+      ind = ind,
+      repn = simu_data$repn,
+      min_bucket = params$min_node_size,
+      nb_leaves = nb_leaves,
+      prop_leaves = nb_leaves / nrow(tb_train)
+    )
+
+  tb_disp_metrics <- disp_train |>
+    bind_rows(disp_valid) |>
+    bind_rows(disp_test) |>
+    mutate(
+      scenario = simu_data$scenario,
+      ind = ind,
+      repn = simu_data$repn,
+      min_bucket = params$min_node_size,
+      nb_leaves = nb_leaves,
+      prop_leaves = nb_leaves / nrow(tb_train)
+    )
+
+  list(
+    scenario = simu_data$scenario,     # data scenario
+    ind = ind,                         # index for grid
+    repn = simu_data$repn,             # data replication ID
+    min_bucket = params$min_node_size, # min number of obs in terminal leaf node
+    metrics = tb_metrics,              # table with performance/calib metrics
+    disp_metrics = tb_disp_metrics,    # table with divergence metrics
+    tb_prop_scores = tb_prop_scores,   # table with P(q1 < score < q2)
+    scores_hist = scores_hist,         # histogram of scores
+    nb_leaves = nb_leaves              # number of terminal leaves
+  )
+}
+```
+
+
+We define a wrapper function, `simulate_rf_scenario()`{.R} which performs a single replication of the simulations going over the different values of the grid search, for a given scenario.
+
+```{r define-simulate_rf_scenario}
+#| code-fold: true
+#| code-summary: Function `simulate_rf_scenario()`{.R}
+#' Simulations for a scenario (single replication)
+#'
+#' @returns list with the following elements:
+#'  - `metrics_all`: computed metrics for each set of hyperparameters.
+#'    Each row gives the values for unique keys
+#'    (sample, min_bucket)
+#'  - `scores_hist`: histograms of scores computed on train, validation and test
+#'    sets
+#'  - `prop_scores_simul` P(q1 < s(x) < q2) for various values of q1 and q2
+#'    Each row gives the values for unique keys
+#'    (sample, min_bucket, q1, q2)
+#'    q1, q2, min_bucket, type, sample)
+simulate_rf_scenario <- function(scenario, params_df, repn) {
+  # Generate Data
+  simu_data <- simulate_data_wrapper(
+    scenario = scenario,
+    params_df = params_df,
+    repn = repn
+  )
+
+  res_simul <- vector(mode = "list", length = nrow(grid))
+  # cli::cli_progress_bar("Iteration grid", total = nrow(grid), type = "tasks")
+  for (j in 1:nrow(grid)) {
+    curent_params <- grid |> slice(!!j)
+    n_var <- simu_data$params_df$n_num + simu_data$params_df$add_categ * 5 +
+      simu_data$params_df$n_noise
+    if (curent_params$mtry > n_var) {
+      # cli::cli_progress_update()
+      next()
+    }
+
+    res_simul[[j]] <- simul_forest(
+      params = curent_params,
+      ind = curent_params$ind,
+      simu_data = simu_data
+    )
+    # cli::cli_progress_update()
+  }
+
+  metrics_simul <- map(res_simul, "metrics") |> list_rbind()
+  disp_metrics_simul <- map(res_simul, "disp_metrics") |> list_rbind()
+  metrics <- suppressMessages(
+    left_join(metrics_simul, disp_metrics_simul)
+  )
+  scores_hist <- map(res_simul, "scores_hist")
+  prop_scores_simul <- map(res_simul, "tb_prop_scores") |> list_rbind()
+
+  list(
+    metrics_all = metrics,
+    scores_hist = scores_hist,
+    prop_scores_simul = prop_scores_simul
+  )
+}
+```
+
+
+## Simulations
+
+We loop over the scenarios and run the `r max(repns_vector)` replications in parallel.
+
+```{r, eval=FALSE}
+#| code-fold: true
+#| code-summary: Simulation codes
+library(pbapply)
+library(parallel)
+ncl <- detectCores()-1
+(cl <- makeCluster(ncl))
+
+clusterEvalQ(cl, {
+  library(tidyverse)
+  library(philentropy)
+  library(ranger)
+  library(ks)
+}) |>
+  invisible()
+
+clusterExport(
+  cl, c(
+    # Functions
+    "brier_score",
+    "compute_metrics",
+    "dispersion_metrics",
+    "prop_btw_quantiles",
+    "subset_target",
+    "simulate_data",
+    "simulate_data_wrapper",
+    "simul_forest",
+    "simulate_rf_scenario",
+    # Objects
+    "grid",
+    "params_df",
+    "repns_vector"
+  )
+)
+
+for (i_scenario in 1:16) {
+  scenario <- i_scenario
+  print(str_c("Scenario ", scenario, "/", nrow(params_df)))
+  clusterExport(cl, c("scenario"))
+  resul_rf_scenario <-
+    pblapply(
+      1:length(repns_vector), function(i) simulate_rf_scenario(
+        scenario = scenario, params_df = params_df, repn = repns_vector[i]
+      ),
+      cl = cl
+    )
+  save(
+    resul_rf_scenario,
+    file = str_c("output/simul/dgp-ojeda/resul_rf_ntrees_scenario_", scenario, ".rda")
+  )
+}
+stopCluster(cl)
+```
+
+
+The results can be loaded as follows:
+
+
+```{r load-resul_rf}
+files <- str_c(
+  "output/simul/dgp-ojeda/resul_rf_ntrees_scenario_", 1:16, ".rda"
+)
+resul_rf <- map(files[file.exists(files)], ~{load(.x) ; resul_rf_scenario})
+```
+
+## Results
+
+We can merge the metrics tables computed for each scenario and replications for these scenarios into a single tibble.
+
+```{r}
+#| code-fold: true
+#| code-summary: Codes to get the metrics tables
+metrics_rf_all <- map(
+  resul_rf,
+  function(resul_rf_sc) map(resul_rf_sc, "metrics_all") |> list_rbind()
+) |>
+  list_rbind() |>
+  mutate(
+    sample = factor(
+      sample,
+      levels = c("train", "valid", "test"),
+      labels = c("Train", "Validation", "Test")
+    )
+  ) |>
+  left_join(
+    grid |> select(ind, mtry, min_node_size, num_trees),
+    by = "ind"
+  )
+
+rf_prop_scores_simul <- map(
+  resul_rf,
+  function(resul_rf_sc) map(resul_rf_sc, "prop_scores_simul") |> list_rbind()
+) |>
+  list_rbind()
+```
+
+For each replication, for a value of the number of trees in the forest (i.e., the hyperparameters that vary are the min bucket size and mtry), let us identify trees of interest.
+```{r, message=FALSE, warning=FALSE}
+#| code-fold: true
+#| code-summary: Codes to identify trees of interest
+# Forest with the smallest average number of leaves per tree
+smallest <- metrics_rf_all |>
+  filter(sample == "Validation") |>
+  group_by(scenario, num_trees, repn) |>
+  arrange(nb_leaves) |>
+  slice_head(n = 1) |>
+  select(scenario, num_trees, repn, ind) |>
+  mutate(result_type = "smallest") |>
+  ungroup()
+
+# Forest with the largest average number of leaves per tree
+largest <- metrics_rf_all |>
+  filter(sample == "Validation") |>
+  group_by(scenario, num_trees, repn) |>
+  arrange(desc(nb_leaves)) |>
+  slice_head(n = 1) |>
+  select(scenario, num_trees, repn, ind) |>
+  mutate(result_type = "largest") |>
+  ungroup()
+
+# Identify tree with highest AUC on test set
+highest_auc <-  metrics_rf_all |>
+  filter(sample == "Validation") |>
+  group_by(scenario, num_trees, repn) |>
+  arrange(desc(AUC)) |>
+  slice_head(n = 1) |>
+  select(scenario, num_trees, repn, ind) |>
+  mutate(result_type = "largest_auc")
+
+# Identify tree with lowest MSE
+lowest_mse <- metrics_rf_all |>
+  filter(sample == "Validation") |>
+  group_by(scenario, num_trees, repn) |>
+  arrange(mse) |>
+  slice_head(n = 1) |>
+  select(scenario, num_trees, repn, ind) |>
+  mutate(result_type = "lowest_mse")
+
+# Identify tree with lowest KL
+lowest_kl <- metrics_rf_all |>
+  filter(sample == "Validation") |>
+  group_by(scenario, num_trees, repn) |>
+  arrange(KL_20_true_probas) |>
+  slice_head(n = 1) |>
+  select(scenario, num_trees, repn, ind) |>
+  mutate(result_type = "lowest_kl")
+
+rf_of_interest <-
+  smallest |>
+  bind_rows(largest) |>
+  bind_rows(highest_auc) |>
+  bind_rows(lowest_mse) |>
+  bind_rows(lowest_kl) |>
+  # Add metrics
+  left_join(
+    metrics_rf_all,
+    by = c("scenario", "num_trees", "repn", "ind"),
+    relationship = "many-to-many" # (train, valid, test)
+  ) |>
+  left_join(
+    rf_prop_scores_simul
+  ) |>
+  mutate(
+    result_type = factor(
+      result_type,
+      levels = c("largest_auc", "smallest", "largest", "lowest_mse", "lowest_kl"),
+      labels = c("Max AUC", "Smallest", "Largest", "Min MSE", "Min KL")
+    )
+  )
+```
+
+
+### Figures
+
+#### Distribution of Scores
+
+Let us plot the distributions of scores for the trees of interest (smallest, largest, max AUC, min MSE, min KL) for a single replication (the first replication) for each scenario.
+
+```{r define-get_bp}
+#| code-fold: true
+#| code-summary: Codes to create the barplots
+get_bp <- function(interest,
+                   scenario,
+                   repn,
+                   num_tree) {
+  # Identify the row number of the grid
+  rf_of_interest_plot <-
+    rf_of_interest |>
+    filter(
+      result_type == !!interest,
+      scenario == !!scenario,
+      repn == !!repn,
+      num_trees == !!num_tree,
+      sample == "Test"
+    )
+
+  ind_grid <- rf_of_interest_plot |>
+    pull("ind")
+
+  # The corresponding boxplot data
+  data_bp <-
+    map(resul_rf[[scenario]], "scores_hist")[[repn]] |>
+    pluck(ind_grid)
+
+  subtitle <- str_c(
+    "No. Leaves = ", rf_of_interest_plot$nb_leaves, ", ",
+    "AUC = ", round(rf_of_interest_plot$AUC, 2), ", \n",
+    "ICI = ", round(rf_of_interest_plot$ici, 2), ", ",
+    "KL = ", round(rf_of_interest_plot$KL_20_true_probas, 2)
+  )
+
+  plot(
+    main = interest,
+    data_bp$test,
+    xlab = latex2exp::TeX("$\\hat{s}(x)$"),
+    ylab = ""
+  )
+  mtext(side = 3, line = -0.25, adj = .5, subtitle, cex = .6)
+}
+
+plot_hist_scenario <- function(scenario,
+                               repn,
+                               num_tree) {
+  par(mfrow = c(1,5))
+  # True probabilities
+  simu_data <- simulate_data_wrapper(
+    scenario = scenario,
+    params_df = params_df,
+    repn = repn # only one replication here
+  )
+  true_prob <- simu_data$data$probs_train
+  hist(
+    true_prob,
+    breaks = seq(0, 1, by = .05),
+    xlab = "p", ylab = "",
+    main = "True Probabilities",
+    xlim = c(0, 1)
+  )
+
+  for (interest in c("Smallest", "Largest", "Max AUC", "Min KL")) {
+    get_bp(
+      interest = interest,
+      scenario = scenario,
+      repn = repn,
+      num_tree = num_tree
+    )
+  }
+}
+```
+
+
+Showing plots for the first replication only:
+```{r}
+repn <- 1
+```
+
+
+```{r tb-labs-scores-dist, echo = FALSE}
+tb_labs <- expand_grid(
+  scenario = 1:16, 
+  num_trees = c(1,2,5)
+) |> 
+  mutate(
+      dgp = case_when(
+        scenario %in% 1:4 ~ 1,
+        scenario %in% 5:8 ~ 2,
+        scenario %in% 9:12 ~ 3,
+        scenario %in% 13:16 ~ 4
+      ),
+      no_noise = c(0, 10, 50, 100)[(scenario-1)%%4 + 1]
+  ) |> 
+  mutate(
+    label = str_c("Distribution of true probabilities and estimated scores on test set for random forests of interest (DGP ", dgp, ", ", no_noise, " noise variables)")
+  ) |> 
+  mutate(i_row = row_number())
+
+plot_hist_scores_config <- function(i_values) {
+  res <- purrr::map_chr(i_values, \(i) {
+    knitr::knit_child(
+      input = "children-dir/forest-scores-dist-ntrees.qmd", 
+      envir = environment(), 
+      quiet = TRUE
+      )
+  })
+
+cat(res, sep = '\n')
+}
+```
+
+:::{.panel-tabset}
+
+##### Single Tree
+
+::::{.panel-tabset}
+
+###### DGP 1
+
+:::::{.panel-tabset}
+```{r plots-scores-ntrees-1-1}
+#| output: asis
+#| echo: false
+i_values <- tb_labs |> filter(num_trees == 1, scenario %in% 1:4) |>
+  pull("i_row")
+plot_hist_scores_config(i_values)
+```
+:::::
+
+
+###### DGP 2
+
+:::::{.panel-tabset}
+```{r plots-scores-ntrees-1-2}
+#| output: asis
+#| echo: false
+i_values <- tb_labs |> filter(num_trees == 1, scenario %in% 5:8) |>
+  pull("i_row")
+plot_hist_scores_config(i_values)
+```
+:::::
+
+###### DGP 3
+
+:::::{.panel-tabset}
+```{r plots-scores-ntrees-1-3}
+#| output: asis
+#| echo: false
+i_values <- tb_labs |> filter(num_trees == 1, scenario %in% 9:12) |>
+  pull("i_row")
+plot_hist_scores_config(i_values)
+```
+:::::
+
+###### DGP 4
+
+:::::{.panel-tabset}
+```{r plots-scores-ntrees-1-4}
+#| output: asis
+#| echo: false
+i_values <- tb_labs |> filter(num_trees == 1, scenario %in% 13:16) |>
+  pull("i_row")
+plot_hist_scores_config(i_values)
+```
+:::::
+
+::::
+
+##### Two Trees
+
+::::{.panel-tabset}
+
+###### DGP 1
+
+:::::{.panel-tabset}
+```{r plots-scores-ntrees-2-1}
+#| output: asis
+#| echo: false
+i_values <- tb_labs |> filter(num_trees == 2, scenario %in% 1:4) |>
+  pull("i_row")
+plot_hist_scores_config(i_values)
+```
+:::::
+
+
+###### DGP 2
+
+:::::{.panel-tabset}
+```{r plots-scores-ntrees-2-2}
+#| output: asis
+#| echo: false
+i_values <- tb_labs |> filter(num_trees == 2, scenario %in% 5:8) |>
+  pull("i_row")
+plot_hist_scores_config(i_values)
+```
+:::::
+
+###### DGP 3
+
+:::::{.panel-tabset}
+```{r plots-scores-ntrees-2-3}
+#| output: asis
+#| echo: false
+i_values <- tb_labs |> filter(num_trees == 2, scenario %in% 9:12) |>
+  pull("i_row")
+plot_hist_scores_config(i_values)
+```
+:::::
+
+###### DGP 4
+
+:::::{.panel-tabset}
+```{r plots-scores-ntrees-2-4}
+#| output: asis
+#| echo: false
+i_values <- tb_labs |> filter(num_trees == 2, scenario %in% 13:16) |>
+  pull("i_row")
+plot_hist_scores_config(i_values)
+```
+:::::
+
+::::
+
+##### Five Trees
+
+::::{.panel-tabset}
+
+###### DGP 1
+
+:::::{.panel-tabset}
+```{r plots-scores-ntrees-5-1}
+#| output: asis
+#| echo: false
+i_values <- tb_labs |> filter(num_trees == 5, scenario %in% 1:4) |>
+  pull("i_row")
+plot_hist_scores_config(i_values)
+```
+:::::
+
+
+###### DGP 2
+
+:::::{.panel-tabset}
+```{r plots-scores-ntrees-5-2}
+#| output: asis
+#| echo: false
+i_values <- tb_labs |> filter(num_trees == 5, scenario %in% 5:8) |>
+  pull("i_row")
+plot_hist_scores_config(i_values)
+```
+:::::
+
+###### DGP 3
+
+:::::{.panel-tabset}
+```{r plots-scores-ntrees-5-3}
+#| output: asis
+#| echo: false
+i_values <- tb_labs |> filter(num_trees == 5, scenario %in% 9:12) |>
+  pull("i_row")
+plot_hist_scores_config(i_values)
+```
+:::::
+
+###### DGP 4
+
+:::::{.panel-tabset}
+```{r plots-scores-ntrees-5-4}
+#| output: asis
+#| echo: false
+i_values <- tb_labs |> filter(num_trees == 5, scenario %in% 13:16) |>
+  pull("i_row")
+plot_hist_scores_config(i_values)
+```
+:::::
+
+::::
+
+:::
+
+
+
+#### Metrics vs. Number of Leaves
+
+
+```{r define-plot_metric_leaves}
+#| code-fold: true
+#| code-summary: Codes to create the plots
+plot_metric_leaves <- function(scenario_number) {
+  data_plot <-
+    metrics_rf_all |>
+    filter(scenario %in% scenario_number) |>
+    group_by(
+      sample, scenario, ind, mtry, num_trees
+    ) |>
+    summarise(
+      KL_20_true_probas = mean(KL_20_true_probas),
+      auc = mean(AUC),
+      ici = mean(ici),
+      nb_leaves = mean(nb_leaves),
+      .groups = "drop"
+    ) |>
+    mutate(
+      mtry_lab = factor(str_c("mtry = ", mtry)),
+      mtry_lab = fct_reorder(mtry_lab, mtry),
+      num_trees_lab = factor(num_trees),
+      num_trees_lab = fct_reorder(num_trees_lab, num_trees),
+      scenario = str_c("Scenario ", scenario)
+    ) |>
+    pivot_longer(cols = c(auc, ici, KL_20_true_probas), names_to = "metric") |>
+    mutate(metric = factor(
+      metric,
+      levels = c("auc", "ici", "KL_20_true_probas"),
+      labels = c("AUC", "ICI", "KL Divergence")
+    ))
+
+
+  ggplot(
+    data = data_plot |> group_by(num_trees_lab) |> arrange(nb_leaves),
+    mapping = aes(x = nb_leaves, y = value)
+  ) +
+    geom_line(
+      mapping = aes(colour = sample, linetype = num_trees_lab, group = )) +
+    ggh4x::facet_grid2(mtry_lab~metric, scales = "free_y", independent = "y") +
+    scale_colour_manual("Sample", values = colour_samples) +
+    scale_linetype_discrete("No. Trees") +
+    theme_paper() +
+    labs(x = "Average Number of leaves", y = NULL)
+}
+```
+
+Let us have a look at the evolution of the metrics depending on the average number of leaves in the estimated trees.
+
+```{r tb-labs-metrics-ntrees, echo = FALSE}
+tb_labs <- expand_grid(
+  scenario = 1:16, 
+) |> 
+  mutate(
+      dgp = case_when(
+        scenario %in% 1:4 ~ 1,
+        scenario %in% 5:8 ~ 2,
+        scenario %in% 9:12 ~ 3,
+        scenario %in% 13:16 ~ 4
+      ),
+      no_noise = c(0, 10, 50, 100)[(scenario-1)%%4 + 1]
+  ) |> 
+  mutate(
+    label = str_c("Metrics as a function of the average number of leaves in the trees of the trained forests (DGP ", dgp, ", ", no_noise, " noise variables)")
+  ) |> 
+  mutate(i_row = row_number())
+
+plot_metrics_config <- function(i_values) {
+ res <- purrr::map_chr(i_values, \(i) {
+    knitr::knit_child(
+      input = "children-dir/forests-metric-vs-leaves-ntrees.qmd", 
+      envir = environment(), 
+      quiet = TRUE
+      )
+  })
+
+cat(res, sep = '\n') 
+}
+```
+
+
+:::{.panel-tabset}
+
+###### DGP 1
+
+::::{.panel-tabset}
+```{r plots-metrics-ntrees-1}
+#| output: asis
+#| echo: false
+i_values <- tb_labs |> filter(scenario %in% 1:4) |> pull("i_row")
+plot_metrics_config(i_values)
+```
+::::
+
+###### DGP 2
+
+::::{.panel-tabset}
+```{r plots-metrics-ntrees-2}
+#| output: asis
+#| echo: false
+i_values <- tb_labs |> filter(scenario %in% 5:8) |> pull("i_row")
+plot_metrics_config(i_values)
+```
+::::
+
+###### DGP 3
+
+::::{.panel-tabset}
+```{r plots-metrics-ntrees-3}
+#| output: asis
+#| echo: false
+i_values <- tb_labs |> filter(scenario %in% 9:12) |> pull("i_row")
+plot_metrics_config(i_values)
+```
+::::
+
+###### DGP 4
+
+::::{.panel-tabset}
+```{r plots-metrics-ntrees-4}
+#| output: asis
+#| echo: false
+i_values <- tb_labs |> filter(scenario %in% 13:16) |> pull("i_row")
+plot_metrics_config(i_values)
+```
+::::
+
+:::

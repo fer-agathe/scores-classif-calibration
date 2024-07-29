@@ -1,0 +1,15 @@
+###### `r tb_labs |> slice(i) |> pull(no_noise)`
+
+```{r}
+#| echo: false
+#| warning: false
+#| fig-cap: !expr glue::glue("{tb_labs |> slice(i) |> pull(label)}")
+#| fig-width: 10
+scenario_number <- tb_labs |> slice(i) |> pull("scenario")
+log_scale <- tb_labs |> slice(i) |> pull("log_scale")
+calib_metric <- tb_labs |> slice(i) |> pull("calib_metric")
+plot_kl_vs_calib(
+  scenario_number = scenario_number, log_scale = log_scale, 
+  calib_metric = calib_metric
+)
+```

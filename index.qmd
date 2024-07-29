@@ -1,0 +1,55 @@
+# Introduction
+
+This notebook is the online appendix of the article titled _Probabilistic Scores of Classifiers: Calibration is not Enough_." It provides supplementary materials to the main part of the paper.
+
+## Abstract of the Paper
+
+When it comes to quantifying the risks associated with decisions made using a classifier, it is essential that the scores returned by the classifier accurately reflect the underlying probability of the event in question. The model must then be well-calibrated. This is particularly relevant in contexts such as assessing the risks of payment defaults or accidents, for example. Tree-based machine learning techniques like random forests and XGBoost are increasingly popular for risk estimation in the industry, though these models are not inherently well-calibrated. Adjusting hyperparameters to optimize calibration metrics, such as the Integrated Calibration Index (ICI), does not ensure score distribution aligns with actual probabilities. Through a series of simulations where we know the underlying probability, we demonstrate that selecting a model by optimizing Kullback-Leibler (KL) divergence should be a preferred approach. The performance loss incurred by using this model remains limited compared to that of the best model chosen by AUC. Furthermore, the model selected by optimizing KL divergence does not necessarily correspond to the one that minimizes the ICI, confirming the idea that calibration is not a sufficient goal. In a real-world context where the distribution of underlying probabilities is no longer directly observable, we adopt an approach where a Beta distribution _a priori_ is estimated by maximum likelihood over 10 UCI datasets. We show, similarly to the simulated data case, that optimizing the hyperparameters of models such as random forests or XGBoost based on KL divergence rather than on AUC allows for a better alignment between the distributions without significant performance loss. Conversely, minimizing the ICI leads to substantial performance loss and suboptimal KL values.
+
+## Outline
+
+The first part of this ebook, 'Subsampling', presents the subsampling algorithm ([Chapter -@sec-target-distributions]).
+
+The second part, 'Metrics', introduces the functions used to assess performance, calibration, and divergence between discrete distributions ([Chapter -@sec-metrics]).
+
+The third part, 'Simulated Data', firsts shows the data generating processes ([Chapter -@sec-data-ojeda]). Then, it presents the estimations made on synthetic dataset for the different models: decision trees ([Chapter -@sec-decision-trees]), random forests ([Chapters -@sec-random-forests and -@sec-random-forests-ntrees]), XGBoost ([Chapter -@sec-simul-xgb]), generalized linear models ([Chapter -@sec-simul-glm]), general additive models ([Chapter -@sec-simul-gam]), and general additive models with selection ([Chapter -@sec-simul-gamsel]).
+
+The fourth part, 'Real-world Data', complements the analysis using real-world datasets from UCI Machine Learning repository. The methodology used to establish a prior assumption on the distribution of the underlying probability of the binary events using a Beta distribution is first presented ([Chapter -@sec-real-example]). Then, the estimation of the parameters of the prior Beta distribution of each dataset is shown ([Chapter -@sec-priors-beta]). The different machine learning models (random forests, XGBoost) and statistical learning models (GLM, GAM, GAMSEL) are then estimated ([Chapter -@sec-real-estimations]). Lastly, the results are shown. ([Chapter -@sec-real-results]).
+
+
+## Replication Codes
+
+The codes to replicate the results displayed in the paper are presented in this ebook. We also provide the codes in an archive file with the following structure:
+
+
+```
+Supplementary-materials
+├ ── replication_book
+├ ── replication_codes
+│   └── functions
+|   |   └── data-ojeda.R
+|   |   └── data-setup-dgp-scenarios.R
+|   |   └── metrics.R
+|   |   └── real-data.R
+|   |   └── subsample_target_distribution.R
+|   |   └── utils.R
+│   └── 01_data_targeted_distrib.R
+│   └── 02_data-simulated.R
+│   └── 03_simul-trees.R
+│   └── 04_simul-random-forests.R
+│   └── 05_simul-random-forests-ntrees.R
+│   └── 06_simul-xgb.R
+│   └── 07_simul-glm.R
+│   └── 08_simul-gam.R
+│   └── 09_simul-gamsel.R
+│   └── 10_simul-comparison.R
+│   └── 11_real-priors-illustration.R
+│   └── 12_real-datasets-priors.R
+│   └── 13_real-estimations.R
+│   └── 14_real_results.R
+│   └── proj.Rproj
+```
+
+
+
+<a href="./replication_codes.zip" class="btn btn-primary btn-sm" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{< fa brands r-project >}} Download the Replication Codes (Zip archive)</a>

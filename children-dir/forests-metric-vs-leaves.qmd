@@ -1,0 +1,11 @@
+##### `r tb_labs |> slice(i) |> pull(scenario)`
+
+```{r}
+#| echo: false
+#| warning: false
+#| fig-cap: !expr glue::glue("{tb_labs |> slice(i) |> pull(label)}")
+lab <- tb_labs |> slice(i) |> pull("label")
+metric <- tb_labs |> slice(i) |> pull("metric")
+scenario_number <- tb_labs |> slice(i) |> pull("scenario")
+plot_metric_leaves(metric = metric, scenario_number = scenario_number)
+```

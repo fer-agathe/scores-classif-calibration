@@ -1,0 +1,1513 @@
+# Extreme Gradient Boosting {#sec-simul-xgb}
+
+
+:::{.callout-note}
+
+This chapter investigates how the distribution of estimated scores by an extreme gradient boosting model evolves with the number of boosting iterations. In the models we train, we vary the maximum depth of trees and consider boosting iterations up to 400. For each configuration, we compute the predicted scores from iteration 1 to 400; for each boosting iteration, we use the predicted scores (both on train set and on test set) to compute various metrics (performance, calibration, divergence between the distribution of scores and that of true underlying probabilities).
+
+:::
+
+```{r load-libraries}
+library(tidyverse)
+library(ggh4x)
+library(ggrepel)
+library(rpart)
+library(locfit)
+library(philentropy)
+
+# Colours for train/validation/test
+colour_samples <- c(
+  "Train" = "#0072B2",
+  "Validation" = "#009E73",
+  "Test" = "#D55E00"
+)
+```
+
+
+
+```{r define-theme_paper}
+#| code-fold: true
+#| code-summary: definition of the `theme_paper()` function (for ggplot2 graphs)
+#' Theme for ggplot2
+#'
+#' @param ... arguments passed to the theme function
+#' @export
+#' @importFrom ggplot2 element_rect element_text element_blank element_line unit
+#'   rel
+theme_paper <- function (...) {
+  ggthemes::theme_base() +
+    theme(
+      plot.background = element_blank(),
+      legend.background = element_rect(
+        fill = "transparent", linetype="solid", colour ="black"),
+      legend.position = "bottom",
+      legend.direction = "horizontal",
+      legend.box = "horizontal",
+      legend.key = element_blank()
+    )
+}
+```
+
+## Data
+
+We generate data using the first 12 scenarios from @Ojeda_2023 and an additional set of 4 scenarios in which the true probability does not depend on the predictors in a linear way (see [Chapter -@sec-data-ojeda]).
+
+```{r source-data-ojeda}
+source("functions/data-ojeda.R")
+library(ks)
+source("functions/subsample_target_distribution.R")
+```
+
+When we simulate a dataset, we draw the following number of observations:
+```{r define-nb_obs}
+nb_obs <- 10000
+```
+
+
+
+```{r}
+#| code-fold: true
+#| code-summary: Definition of the 16 scenarios
+# Coefficients beta
+coefficients <- list(
+  # First category (baseline, 2 covariates)
+  c(0.5, 1),  # scenario 1, 0 noise variable
+  c(0.5, 1),  # scenario 2, 10 noise variables
+  c(0.5, 1),  # scenario 3, 50 noise variables
+  c(0.5, 1),  # scenario 4, 100 noise variables
+  # Second category (same as baseline, with lower number of 1s)
+  c(0.5, 1),  # scenario 5, 0 noise variable
+  c(0.5, 1),  # scenario 6, 10 noise variables
+  c(0.5, 1),  # scenario 7, 50 noise variables
+  c(0.5, 1),  # scenario 8, 100 noise variables
+  # Third category (same as baseline but with 5 num. and 5 categ. covariates)
+  c(0.1, 0.2, 0.3, 0.4, 0.5, 0.01, 0.02, 0.03, 0.04, 0.05),
+  c(0.1, 0.2, 0.3, 0.4, 0.5, 0.01, 0.02, 0.03, 0.04, 0.05),
+  c(0.1, 0.2, 0.3, 0.4, 0.5, 0.01, 0.02, 0.03, 0.04, 0.05),
+  c(0.1, 0.2, 0.3, 0.4, 0.5, 0.01, 0.02, 0.03, 0.04, 0.05),
+  # Fourth category (nonlinear predictor, 3 covariates)
+  c(0.5, 1, .3),  # scenario 5, 0 noise variable
+  c(0.5, 1, .3),  # scenario 6, 10 noise variables
+  c(0.5, 1, .3),  # scenario 7, 50 noise variables
+  c(0.5, 1, .3)  # scenario 8, 100 noise variables
+)
+
+# Mean parameter for the normal distribution to draw from to draw num covariates
+mean_num <- list(
+  # First category (baseline, 2 covariates)
+  rep(0, 2),  # scenario 1, 0 noise variable
+  rep(0, 2),  # scenario 2, 10 noise variables
+  rep(0, 2),  # scenario 3, 50 noise variables
+  rep(0, 2),  # scenario 4, 100 noise variables
+  # Second category (same as baseline, with lower number of 1s)
+  rep(0, 2),  # scenario 5, 0 noise variable
+  rep(0, 2),  # scenario 6, 10 noise variables
+  rep(0, 2),  # scenario 7, 50 noise variables
+  rep(0, 2),  # scenario 8, 100 noise variables
+  # Third category (same as baseline but with 5 num. and 5 categ. covariates)
+  rep(0, 5),
+  rep(0, 5),
+  rep(0, 5),
+  rep(0, 5),
+  # Fourth category (nonlinear predictor, 3 covariates)
+  rep(0, 3),
+  rep(0, 3),
+  rep(0, 3),
+  rep(0, 3)
+)
+# Sd parameter for the normal distribution to draw from to draw num covariates
+sd_num <- list(
+  # First category (baseline, 2 covariates)
+  rep(1, 2),  # scenario 1, 0 noise variable
+  rep(1, 2),  # scenario 2, 10 noise variables
+  rep(1, 2),  # scenario 3, 50 noise variables
+  rep(1, 2),  # scenario 4, 100 noise variables
+  # Second category (same as baseline, with lower number of 1s)
+  rep(1, 2),  # scenario 5, 0 noise variable
+  rep(1, 2),  # scenario 6, 10 noise variables
+  rep(1, 2),  # scenario 7, 50 noise variables
+  rep(1, 2),  # scenario 8, 100 noise variables
+  # Third category (same as baseline but with 5 num. and 5 categ. covariates)
+  rep(1, 5),
+  rep(1, 5),
+  rep(1, 5),
+  rep(1, 5),
+  # Fourth category (nonlinear predictor, 3 covariates)
+  rep(1, 3),
+  rep(1, 3),
+  rep(1, 3),
+  rep(1, 3)
+)
+
+params_df <- tibble(
+  scenario = 1:16,
+  coefficients = coefficients,
+  n_num = c(rep(2, 8), rep(5, 4), rep(3, 4)),
+  add_categ = c(rep(FALSE, 8), rep(TRUE, 4), rep(FALSE, 4)),
+  n_noise = rep(c(0, 10, 50, 100), 4),
+  mean_num = mean_num,
+  sd_num = sd_num,
+  size_train = rep(nb_obs, 16),
+  size_valid = rep(nb_obs, 16),
+  size_test = rep(nb_obs, 16),
+  transform_probs = c(rep(FALSE, 4), rep(TRUE, 4), rep(FALSE, 4), rep(FALSE, 4)),
+  linear_predictor = c(rep(TRUE, 12), rep(FALSE, 4)),
+  seed = 202105
+)
+rm(coefficients, mean_num, sd_num)
+```
+
+
+## Metrics
+
+We load the functions from [Chapter -@sec-metrics] to compute performance, calibration and divergence metrics.
+
+```{r source-metrics}
+source("functions/metrics.R")
+```
+
+## Simulations Setup
+
+
+To train the models, we rely on the {xgboost} R package.
+```{r load-xgboost}
+library(xgboost)
+```
+
+As explained in the foreword of this page, we compute metrics based on scores obtained at various boosting iterations. To do so, we define a function, `get_metrics_nb_iter()`{.R}, that will be applied to a fitted model. This function will be called for all the boosting iterations (controlled by the `nb_iter` argument). The function returns a list with the following elements:
+
+- `scenario`: the ID of the scenario
+- `ind`: the index of the grid search (so that we can join with the hyperparameters values, if needed)
+- `repn`: the ID of the replication
+- `nb_iter`: the boosting iteration at which the metrics are computed
+- `tb_metrics`: the tibble with the performance, calibration, and divergence metrics (one row for the train sample, one row for the validation sample, and one row for the test sample)
+- `tb_prop_scores`: additional metrics ($\mathbb{P}(q_1 < \hat{s}(\mathbf{x}) < q_2)$ for multiple values for $q_1$ and $q_2 = 1-q_1$)
+- `scores_hist`: elements to be able to plot an histogram of the scores on both the train set and the test set (using 20 equally-sized bins over $[0,1]$).
+
+
+```{r define-get_metrics_nb_iter}
+#| code-fold: true
+#| code-summary: Function `get_metrics_nb_iter()`{.R}
+#' Computes the performance and calibration metrics for an xgb model,
+#' depending on the number of iterations kept.
+#'
+#' @param nb_iter number of boosting iterations to keep
+#' @param params hyperparameters of the current model
+#' @param fitted_xgb xgb estimated model
+#' @param tb_train_xgb train data (in xgb.DMatrix format)
+#' @param tb_valid_xgb validation data (in xgb.DMatrix format)
+#' @param tb_test_xgb test data (in xgb.DMatrix format)
+#' @param simu_data simulated dataset
+#' @param true_prob list with true probabilities on train, validation and
+#'  test sets
+get_metrics_nb_iter <- function(nb_iter,
+                                params,
+                                fitted_xgb,
+                                tb_train_xgb,
+                                tb_valid_xgb,
+                                tb_test_xgb,
+                                simu_data,
+                                true_prob) {
+
+  ind <- params$ind
+  max_depth <- params$max_depth
+  tb_train <- simu_data$data$train |> rename(d = y)
+  tb_valid <- simu_data$data$valid |> rename(d = y)
+  tb_test <- simu_data$data$test |> rename(d = y)
+
+  # Predicted scores
+  scores_train <- predict(fitted_xgb, tb_train_xgb, iterationrange = c(1, nb_iter))
+  scores_valid <- predict(fitted_xgb, tb_valid_xgb, iterationrange = c(1, nb_iter))
+  scores_test <- predict(fitted_xgb, tb_test_xgb, iterationrange = c(1, nb_iter))
+
+  ## Histogram of scores----
+  breaks <- seq(0, 1, by = .05)
+  scores_train_hist <- hist(scores_train, breaks = breaks, plot = FALSE)
+  scores_valid_hist <- hist(scores_valid, breaks = breaks, plot = FALSE)
+  scores_test_hist <- hist(scores_test, breaks = breaks, plot = FALSE)
+  scores_hist <- list(
+    train = scores_train_hist,
+    valid = scores_valid_hist,
+    test = scores_test_hist,
+    scenario = simu_data$scenario,
+    ind = ind,
+    repn = simu_data$repn,
+    max_depth = params$max_depth,
+    nb_iter = nb_iter
+  )
+
+  ## Estimation of P(q1 < score < q2)----
+  proq_scores_train <- map(
+    c(.1, .2, .3, .4),
+    ~prop_btw_quantiles(s = scores_train, q1 = .x)
+  ) |>
+    list_rbind() |>
+    mutate(sample = "train")
+  proq_scores_valid <- map(
+    c(.1, .2, .3, .4),
+    ~prop_btw_quantiles(s = scores_valid, q1 = .x)
+  ) |>
+    list_rbind() |>
+    mutate(sample = "valid")
+  proq_scores_test <- map(
+    c(.1, .2, .3, .4),
+    ~prop_btw_quantiles(s = scores_test, q1 = .x)
+  ) |>
+    list_rbind() |>
+    mutate(sample = "test")
+
+  ## Dispersion Metrics----
+  disp_train <- dispersion_metrics(
+    true_probas = true_prob$train, scores = scores_train
+  ) |> mutate(sample = "train")
+
+  disp_valid <- dispersion_metrics(
+    true_probas = true_prob$valid, scores = scores_valid
+  ) |>mutate(sample = "valid")
+
+  disp_test <- dispersion_metrics(
+    true_probas = true_prob$test, scores = scores_test
+  ) |> mutate(sample = "test")
+
+  # Performance and Calibration Metrics
+  # We add very small noise to predicted scores
+  # otherwise the local regression may crash
+  scores_train_noise <- scores_train +
+    runif(n = length(scores_train), min = 0, max = 0.01)
+  scores_train_noise[scores_train_noise > 1] <- 1
+  metrics_train <- compute_metrics(
+    obs = tb_train$d, scores = scores_train_noise, true_probas = true_prob$train
+  ) |> mutate(sample = "train")
+
+  scores_valid_noise <- scores_valid +
+    runif(n = length(scores_valid), min = 0, max = 0.01)
+  scores_valid_noise[scores_valid_noise > 1] <- 1
+  metrics_valid <- compute_metrics(
+    obs = tb_valid$d, scores = scores_valid_noise, true_probas = true_prob$valid
+  ) |> mutate(sample = "valid")
+
+  scores_test_noise <- scores_test +
+    runif(n = length(scores_test), min = 0, max = 0.01)
+  scores_test_noise[scores_test_noise > 1] <- 1
+  metrics_test <- compute_metrics(
+    obs = tb_test$d, scores = scores_test_noise, true_probas = true_prob$test
+  ) |> mutate(sample = "test")
+
+  tb_metrics <- metrics_train |>
+    bind_rows(metrics_valid) |>
+    bind_rows(metrics_test) |>
+    left_join(
+      disp_train |>
+        bind_rows(disp_valid) |> 
+        bind_rows(disp_test),
+      by = "sample"
+    ) |>
+    mutate(
+      scenario = simu_data$scenario,
+      ind = ind,
+      repn = simu_data$repn,
+      max_depth = params$max_depth,
+      # type = !!type,
+      nb_iter = nb_iter
+    )
+
+  tb_prop_scores <- proq_scores_train |>
+    bind_rows(proq_scores_valid) |>
+    bind_rows(proq_scores_test) |>
+    mutate(
+      scenario = simu_data$scenario,
+      ind = ind,
+      repn = simu_data$repn,
+      max_depth = params$max_depth,
+      nb_iter = nb_iter
+    )
+
+  list(
+    scenario = simu_data$scenario,     # data scenario
+    ind = ind,                         # index for grid
+    repn = simu_data$repn,             # data replication ID
+    nb_iter = nb_iter,                 # number of boosting iterations
+    tb_metrics = tb_metrics,           # table with performance/calib/divergence
+                                       #  metrics
+    tb_prop_scores = tb_prop_scores,   # table with P(q1 < score < q2)
+    scores_hist = scores_hist          # histogram of scores
+  )
+}
+```
+
+We define another function, `simul_xgb()`{.R} which trains an extreme gradient boosting model for a single replication. It calls the `get_metrics_nb_iter()`{.R} on each of the boosting iterations of the model from the second to the last (400th), and returns a list of length 400-1 where each element is a list returned by the `get_metrics_nb_iter()`{.R}.
+
+```{r define-simul_xgb}
+#| code-fold: true
+#| code-summary: Function `simul_xgb()`{.R}
+#' Train an xgboost model and compute performance, calibration, and dispersion
+#' metrics
+#'
+#' @param params tibble with hyperparameters for the simulation
+#' @param ind index of the grid (numerical ID)
+#' @param simu_data simulated data obtained with `simulate_data_wrapper()`
+simul_xgb <- function(params,
+                      ind,
+                      simu_data) {
+  tb_train <- simu_data$data$train |> rename(d = y)
+  tb_valid <- simu_data$data$valid |> rename(d = y)
+  tb_test <- simu_data$data$test |> rename(d = y)
+  true_prob <-
+    list(
+      train = simu_data$data$probs_train,
+      valid = simu_data$data$probs_valid,
+      test = simu_data$data$probs_test
+    )
+
+  ## Format data for xgboost----
+  tb_train_xgb <- xgb.DMatrix(
+    data = model.matrix(d ~ -1 + ., tb_train), label = tb_train$d
+  )
+  tb_valid_xgb <- xgb.DMatrix(
+    data = model.matrix(d ~ -1 + ., tb_valid), label = tb_valid$d
+  )
+  tb_test_xgb <- xgb.DMatrix(
+    data = model.matrix(d ~ -1 + ., tb_test), label = tb_test$d
+  )
+  # Parameters for the algorithm
+  param <- list(
+    max_depth = params$max_depth, #Note: root node is indexed 0
+    eta = params$eta,
+    nthread = 1,
+    objective = "binary:logistic",
+    eval_metric = "auc"
+  )
+  watchlist <- list(train = tb_train_xgb, eval = tb_valid_xgb)
+
+  ## Estimation----
+  xgb_fit <- xgb.train(
+    param, tb_train_xgb,
+    nrounds = params$nb_iter_total,
+    watchlist,
+    verbose = 0
+  )
+
+  # Number of leaves
+  # dt_tree <- xgb.model.dt.tree(model = xgb_fit)
+  # path_depths <- xgboost:::get.leaf.depth(dt_tree)
+  # path_depths |> count(Tree) |> select(n) |> table()
+
+  # Then, for each boosting iteration number up to params$nb_iter_total
+  # compute the predicted scores and evaluate the metrics
+  resul <- map(
+    seq(2, params$nb_iter_total),
+    ~get_metrics_nb_iter(
+      nb_iter = .x,
+      params = params,
+      fitted_xgb = xgb_fit,
+      tb_train_xgb = tb_train_xgb,
+      tb_valid_xgb = tb_valid_xgb,
+      tb_test_xgb = tb_test_xgb,
+      simu_data = simu_data,
+      true_prob = true_prob
+    ),
+  )
+  resul
+}
+
+simulate_xgb_scenario <- function(scenario, params_df, repn) {
+  # Generate Data
+  simu_data <- simulate_data_wrapper(
+    scenario = scenario,
+    params_df = params_df,
+    repn = repn
+  )
+
+  # Looping over the grid hyperparameters for the scenario
+  res_simul <- vector(mode = "list", length = nrow(grid))
+  cli::cli_progress_bar("Iteration grid", total = nrow(grid), type = "tasks")
+  for (j in 1:nrow(grid)) {
+    curent_params <- grid |> dplyr::slice(!!j)
+    res_simul[[j]] <- simul_xgb(
+      params = curent_params,
+      ind = curent_params$ind,
+      simu_data = simu_data
+    )
+    cli::cli_progress_update()
+  }
+
+
+  # The metrics computed for all set of hyperparameters (identified with `ind`)
+  # and for each number of boosting iterations (`nb_iter`), for the current
+  # scenario (`scenario`) and current replication number (`repn`)
+  metrics_simul <- map(
+    res_simul,
+    function(simul_grid_j) map(simul_grid_j, "tb_metrics") |> list_rbind()
+  ) |>
+    list_rbind()
+
+  # Sanity check
+  # metrics_simul |> count(scenario, repn, ind, sample, nb_iter) |>
+  #   filter(n > 1)
+
+  # P(q_1<s(x)<q_2)
+  prop_scores_simul <- map(
+    res_simul,
+    function(simul_grid_j) map(simul_grid_j, "tb_prop_scores") |> list_rbind()
+  ) |>
+    list_rbind()
+
+  # Sanity check
+  # prop_scores_simul |> count(scenario, repn, ind, sample, nb_iter)
+
+  # Histogram of estimated scores
+  scores_hist <- map(
+    res_simul,
+    function(simul_grid_j) map(simul_grid_j, "scores_hist")
+  )
+
+  list(
+    metrics_simul = metrics_simul,
+    scores_hist = scores_hist,
+    prop_scores_simul = prop_scores_simul
+  )
+}
+```
+
+
+### Grid
+
+We consider the following grid:
+```{r define-grid-xgb}
+grid <- expand_grid(
+  max_depth = c(2, 4, 6),
+  nb_iter_total = 400,
+  eta = 0.3
+) |>
+  mutate(ind = row_number())
+```
+
+The desired number of replications for each scenario needs to be set:
+```{r define-repns_vector}
+repns_vector <- 1:100
+```
+
+
+The different configurations are reported in @tbl-grid-values-xgb.
+
+```{r}
+#| tbl-cap: "Grid Search Values"
+#| label: tbl-grid-values-xgb
+DT::datatable(grid)
+```
+
+
+We define a function, `simulate_xgb_scenario()`{.R} to train the model on a dataset for all different values of the hyperparameters of the grid. This function performs a single replication of the simulations for a single scenario.
+
+```{r define-simulate_xgb_scenario}
+#| code-fold: true
+#| code-summary: Function `simulate_xgb_scenario()`{.R}
+simulate_xgb_scenario <- function(scenario, params_df, repn) {
+  # Generate Data
+  simu_data <- simulate_data_wrapper(
+    scenario = scenario,
+    params_df = params_df,
+    repn = repn
+  )
+
+  # Looping over the grid hyperparameters for the scenario
+  res_simul <- vector(mode = "list", length = nrow(grid))
+  cli::cli_progress_bar("Iteration grid", total = nrow(grid), type = "tasks")
+  for (j in 1:nrow(grid)) {
+    curent_params <- grid |> dplyr::slice(!!j)
+    res_simul[[j]] <- simul_xgb(
+      params = curent_params,
+      ind = curent_params$ind,
+      simu_data = simu_data
+    )
+    cli::cli_progress_update()
+  }
+
+
+  # The metrics computed for all set of hyperparameters (identified with `ind`)
+  # and for each number of boosting iterations (`nb_iter`), for the current
+  # scenario (`scenario`) and current replication number (`repn`)
+  metrics_simul <- map(
+    res_simul,
+    function(simul_grid_j) map(simul_grid_j, "tb_metrics") |> list_rbind()
+  ) |>
+    list_rbind()
+
+  # Sanity check
+  # metrics_simul |> count(scenario, repn, ind, sample, nb_iter) |>
+  #   filter(n > 1)
+
+  # P(q_1<s(x)<q_2)
+  prop_scores_simul <- map(
+    res_simul,
+    function(simul_grid_j) map(simul_grid_j, "tb_prop_scores") |> list_rbind()
+  ) |>
+    list_rbind()
+
+  # Sanity check
+  # prop_scores_simul |> count(scenario, repn, ind, sample, nb_iter)
+
+  # Histogram of estimated scores
+  scores_hist <- map(
+    res_simul,
+    function(simul_grid_j) map(simul_grid_j, "scores_hist")
+  )
+
+  list(
+    metrics_simul = metrics_simul,
+    scores_hist = scores_hist,
+    prop_scores_simul = prop_scores_simul
+  )
+}
+```
+
+
+
+## Estimations
+
+
+We loop over the 16 scenarios and run the `r max(repns_vector)` replications in parallel.
+
+```{r run-xgb-simulations, message=FALSE, warning=FALSE, eval=FALSE}
+#| code-fold: true
+#| code-summary: Estimation codes
+library(pbapply)
+library(parallel)
+ncl <- detectCores()-1
+(cl <- makeCluster(ncl))
+
+clusterEvalQ(cl, {
+  library(tidyverse)
+  library(locfit)
+  library(philentropy)
+  library(xgboost)
+  library(ks)
+}) |>
+  invisible()
+
+clusterExport(
+  cl, c(
+    # Functions
+    "brier_score",
+    "compute_metrics",
+    "dispersion_metrics",
+    "prop_btw_quantiles",
+    "subset_target",
+    "simulate_data",
+    "simulate_data_wrapper",
+    "simul_xgb",
+    "simulate_xgb_scenario",
+    "get_metrics_nb_iter",
+    # Objects
+    "grid",
+    "params_df",
+    "repns_vector"
+  )
+)
+
+for (i_scenario in 1:16) {
+  scenario <- i_scenario
+  print(str_c("Scenario ", scenario, "/", nrow(params_df)))
+  clusterExport(cl, c("scenario"))
+  resul_xgb_scenario <-
+    pblapply(
+      1:length(repns_vector), function(i) simulate_xgb_scenario(
+        scenario = scenario, params_df = params_df, repn = repns_vector[i]
+      ),
+      cl = cl
+    )
+  save(
+    resul_xgb_scenario,
+    file = str_c("output/simul/dgp-ojeda/resul_xgb_scenario_", scenario, ".rda")
+  )
+}
+stopCluster(cl)
+```
+
+The results can be loaded as follows:
+
+```{r load-resul_xgb}
+scenarios <- 1:16
+files <- str_c(
+  "output/simul/dgp-ojeda/resul_xgb_scenario_", scenarios, ".rda"
+)
+resul_xgb <- map(files[file.exists(files)], ~{load(.x) ; resul_xgb_scenario})
+```
+
+The `resul_rf` object is of length 16: each element contains the simulations for a scenario. For each scenario, the elements are a list of length `max(repns_vector)`, i.e., the number of replications. Each replication gives, in a list, the following elements:
+
+- `metrics_simul`: the metrics (AUC, Calibration, KL Divergence, etc.) for each model from the grid search, for all boosting iterations
+- `scores_hist`: the counts on bins defined on estimated scores (on train, validation, and test sets)
+- `prop_scores_simul`: the estimations of $\mathbb{P}(q_1 < \hat{\mathbf{x}}< q_2)$ for various values of `q_1` and `q_2`.
+
+## Results
+
+We can now extract some information from the results.
+
+We first aggregate all the computed metrics performance/calibration/divergence in a single tibble, `metrics_xgb_all`.
+```{r}
+#| code-fold: true
+#| code-summary: Codes to create the metrics table
+metrics_xgb_all <- map(
+  resul_xgb,
+  function(resul_xgb_sc) map(resul_xgb_sc, "metrics_simul") |> list_rbind()
+) |>
+  list_rbind() |>
+  mutate(
+    sample = factor(
+      sample,
+      levels = c("train", "valid", "test"),
+      labels = c("Train","Validation" ,"Test")
+    )
+  )
+
+# Sanity check
+# metrics_xgb_all |> count(scenario, ind, sample, nb_iter) |>
+#   filter(n != max(repns_vector))
+```
+
+For each replication, we made some hyperparameters vary. Let us identify some models of interest:
+
+- `smallest`: model with the lowest number of boosting iteration
+- `largest`: model with the highest number of boosting iteration
+- `largest_auc`: model with the highest AUC on validation set
+- `lowest_mse`: model with the lowest MSE on validation set
+- `lowest_ici`: model with the lowest ICI on validation set
+- `lowest_kl`: model with the lowest KL Divergence on validation set
+
+```{r xgb-identify-trees-of-interest}
+#| code-fold: true
+# Identify the model with the smallest number of boosting iterations
+smallest_xgb <-
+  metrics_xgb_all |>
+  filter(sample == "Validation") |>
+  group_by(scenario, repn) |>
+  arrange(nb_iter) |>
+  slice_head(n = 1) |>
+  select(scenario, repn, ind, nb_iter) |>
+  mutate(result_type = "smallest") |>
+  ungroup()
+
+# Identify the largest tree
+largest_xgb <-
+  metrics_xgb_all |>
+  filter(sample == "Validation") |>
+  group_by(scenario, repn) |>
+  arrange(desc(nb_iter)) |>
+  slice_head(n = 1) |>
+  select(scenario, repn, ind, nb_iter) |>
+  mutate(result_type = "largest") |>
+  ungroup()
+
+# Identify tree with highest AUC on test set
+highest_auc_xgb <-
+  metrics_xgb_all |>
+  filter(sample == "Validation") |>
+  group_by(scenario, repn) |>
+  arrange(desc(AUC)) |>
+  slice_head(n = 1) |>
+  select(scenario, repn, ind, nb_iter) |>
+  mutate(result_type = "largest_auc") |>
+  ungroup()
+
+# Identify tree with lowest MSE
+lowest_mse_xgb <-
+  metrics_xgb_all |>
+  filter(sample == "Validation") |>
+  group_by(scenario, repn) |>
+  arrange(mse) |>
+  slice_head(n = 1) |>
+  select(scenario, repn, ind, nb_iter) |>
+  mutate(result_type = "lowest_mse") |>
+  ungroup()
+
+# Identify tree with lowest brier
+lowest_brier_xgb <-
+  metrics_xgb_all |>
+  filter(sample == "Validation") |>
+  group_by(scenario, repn) |>
+  arrange(brier) |>
+  slice_head(n = 1) |>
+  select(scenario, repn, ind, nb_iter) |>
+  mutate(result_type = "lowest_brier") |>
+  ungroup()
+
+# Identify tree with lowest ICI
+lowest_ici_xgb <-
+  metrics_xgb_all |>
+  filter(sample == "Validation") |>
+  group_by(scenario, repn) |>
+  arrange(ici) |>
+  slice_head(n = 1) |>
+  select(scenario, repn, ind, nb_iter) |>
+  mutate(result_type = "lowest_ici") |>
+  ungroup()
+
+# Identify tree with lowest KL
+lowest_kl_xgb <-
+  metrics_xgb_all |>
+  filter(sample == "Validation") |>
+  group_by(scenario, repn) |>
+  arrange(KL_20_true_probas) |>
+  slice_head(n = 1) |>
+  select(scenario, repn, ind, nb_iter) |>
+  mutate(result_type = "lowest_kl") |>
+  ungroup()
+
+# Merge these
+models_of_interest_xgb <-
+  smallest_xgb |>
+  bind_rows(largest_xgb) |>
+  bind_rows(highest_auc_xgb) |>
+  bind_rows(lowest_mse_xgb) |>
+  bind_rows(lowest_brier_xgb) |>
+  bind_rows(lowest_ici_xgb) |>
+  bind_rows(lowest_kl_xgb)
+
+# Add metrics now
+models_of_interest_metrics <-
+  models_of_interest_xgb |>
+  left_join(
+    metrics_xgb_all,
+    by = c("scenario", "repn", "ind", "nb_iter"),
+    relationship = "many-to-many" # (train, valid, test)
+  )
+
+# Sanity check
+# models_of_interest_metrics |> count(scenario, sample, result_type)
+```
+
+### Metrics vs Number of Iterations
+
+We define a function, `plot_metrics()`{.R} to plot selected metrics (AUC, ICI, and KL Divergence) as a function of the number of boosting iterations. Each curve corresponds to a value of the maximal depth hyperparameter.
+
+```{r define-plot_metrics}
+#| code-fold: true
+#| code-summary: Function `plot_metrics()`{.R}
+plot_metrics <- function(dgp) {
+  df_plot <-
+    metrics_xgb_all |>
+    mutate(
+      dgp = case_when(
+        scenario %in% 1:4 ~ 1,
+        scenario %in% 5:8 ~ 2,
+        scenario %in% 9:12 ~ 3,
+        scenario %in% 13:16 ~ 4
+      ),
+      no_noise = c(0, 10, 50, 100)[(scenario-1)%%4 + 1],
+      no_noise = factor(
+        no_noise,
+        levels = c(no_noise),
+        labels = str_c(no_noise, " noise variables")
+      )
+    ) |>
+    filter(dgp == !!dgp) |>
+    select(
+      dgp, no_noise, scenario, ind, sample, nb_iter, max_depth,
+      AUC, brier, ici, KL_20_true_probas
+    ) |>
+    pivot_longer(
+      cols = -c(dgp, no_noise, scenario, ind, sample, nb_iter, max_depth),
+      names_to = "metric", values_to = "value"
+    ) |>
+    group_by(
+      dgp, no_noise, scenario, ind, sample, nb_iter, max_depth, metric
+    ) |>
+    summarise(
+      value_lower = quantile(value, probs = 2.5/100),
+      value_upper = quantile(value, probs = 97.5/100),
+      value = mean(value)
+    ) |>
+    mutate(
+      max_depth = factor(max_depth),
+      metric = factor(
+        metric,
+        levels = c("AUC", "brier", "ici", "KL_20_true_probas"),
+        labels = c("AUC", "brier", "ICI", "KL Divergence")
+      )
+    ) |>
+    filter(max_depth %in% c(2,4,6))
+
+  ggplot(
+    data = df_plot,
+    mapping = aes(x = nb_iter, y = value)
+  ) +
+    geom_ribbon(
+      mapping = aes(
+        ymin = value_lower, ymax = value_upper,
+        fill = sample
+      ),
+      alpha = .1
+    ) +
+    geom_line(mapping = aes(colour = sample, linetype = max_depth)) +
+    geom_text_repel(
+      data = df_plot |> filter(nb_iter == 380),
+      mapping = aes(
+        x = nb_iter, y = value, label = max_depth, colour = sample
+      ),
+      size = 4, # font size in the text labels
+      point.padding = 0, # additional padding around each point
+      min.segment.length = 0, # draw all line segments
+      max.time = 1, max.iter = 1e5, # stop after 1 second, or after 100,000 iterations
+      box.padding = .3, # additional padding around each text label
+      segment.size = .25 # line segment thickness
+    ) +
+    ggh4x::facet_grid2(metric~no_noise, scales = "free_y", independent = "y") +
+    labs(
+      x = "Boosting Iterations", y = NULL
+    ) +
+    scale_colour_manual(
+      "Sample", values = colour_samples,
+      guide = guide_legend(
+        override.aes = list(label = "")
+      )
+    ) +
+    scale_linetype_discrete("Max Depth") +
+    scale_fill_manual("Sample", values = colour_samples) +
+    theme_paper()
+}
+```
+
+
+:::{.panel-tabset}
+#### DGP 1
+```{r, warning=FALSE, message=FALSE}
+#| fig-cap: Metrics for DGP 1
+#| label: fig-xgb-metrics-1
+#| code-fold: true
+#| fig-height: 8
+#| fig-width: 10
+plot_metrics(1)
+```
+
+#### DGP 2
+```{r, warning=FALSE, message=FALSE}
+#| fig-cap: Metrics for DGP 2
+#| label: fig-xgb-metrics-2
+#| code-fold: true
+#| fig-height: 8
+#| fig-width: 10
+plot_metrics(2)
+```
+
+#### DGP 3
+```{r, warning=FALSE, message=FALSE}
+#| fig-cap: Metrics for DGP 3
+#| label: fig-xgb-metrics-3
+#| code-fold: true
+#| fig-height: 8
+#| fig-width: 10
+plot_metrics(3)
+```
+
+#### DGP 4
+```{r, warning=FALSE, message=FALSE}
+#| fig-cap: Metrics for DGP 4
+#| label: fig-xgb-metrics-4
+#| code-fold: true
+#| fig-height: 8
+#| fig-width: 10
+plot_metrics(4)
+```
+:::
+
+
+### Distribution of Scores
+
+Let us extract all the histogram information computed over the simulations and put that in a single object, `scores_hist_all`.
+
+```{r define-scores_hist_all}
+scores_hist_all <-
+  map(
+    resul_xgb,
+    function(resul_xgb_sc) map(resul_xgb_sc, "scores_hist")
+  )
+```
+
+We then define a function, `plot_bp_xgb()`{.R} which plots the distribution of scores on the test set for a single replication (`repn`), for a scenario, (`scenario`), and a given maximal tree depth (`max_depth`). We also define a helper function, `plot_bp_interest()`, which plots the histogram of the scores at a specific iteration number. We will then be able to plot the distributions at the beginning of the boosting iterations, at the end, at a point where the AUC was the highest on the validation set, and at a point where the KL divergence between the distribution of scores on the validation set and the distribution of the true probabilities was the lowest.
+
+```{r}
+#| code-fold: true
+#| code-summary: Code to create the barplots
+plot_bp_interest <- function(metrics_interest, scores_hist_interest, label) {
+  subtitle <- str_c(
+    "Depth = ", metrics_interest$max_depth, ", ",
+    "MSE = ", round(metrics_interest$mse, 2), ", ",
+    "AUC = ", round(metrics_interest$AUC, 2), ", \n",
+    "Brier = ", round(metrics_interest$brier, 2), ",",
+    "ICI = ", round(metrics_interest$ici, 2), ", ",
+    "KL = ", round(metrics_interest$KL_20_true_probas, 2)
+  )
+  
+  plot(
+    main = str_c(label, " (iter = ", metrics_interest$nb_iter,")"),
+    scores_hist_interest$test,
+    xlab = latex2exp::TeX("$\\hat{s}(x)$"),
+    ylab = ""
+  )
+  mtext(side = 3, line = -0.25, adj = .5, subtitle, cex = .5)
+}
+
+plot_bp_xgb <- function(scenario, repn, max_depth) {
+  # Focus on current scenario
+  scores_hist_scenario <- scores_hist_all[[scenario]]
+  # Focus on a particular replication
+  scores_hist_repn <- scores_hist_scenario[[repn]]
+  # Focus on a value for max_depth
+  max_depth_val <- map_dbl(scores_hist_repn, ~.x[[1]]$max_depth)
+  i_max_depth <- which(max_depth_val == max_depth)
+  scores_hist <- scores_hist_repn[[i_max_depth]]
+  
+  # The metrics for the corresponding simulations, on the validation set
+  metrics_xgb_current_valid <-
+    metrics_xgb_all |>
+    filter(
+      scenario == !!scenario,
+      repn == !!repn,
+      max_depth == !!max_depth,
+      sample == "Validation"
+    )
+  # and on the test set
+  metrics_xgb_current_test <-
+    metrics_xgb_all |>
+    filter(
+      scenario == !!scenario,
+      repn == !!repn,
+      max_depth == !!max_depth,
+      sample == "Test"
+    )
+  
+  # True Probabilities
+  simu_data <- simulate_data_wrapper(
+    scenario = scenario,
+    params_df = params_df,
+    repn = repn # only one replication here
+  )
+  true_prob <- simu_data$data$probs_train
+  hist(
+    true_prob,
+    breaks = seq(0, 1, by = .05),
+    xlab = "p", ylab = "",
+    main = "True Probabilities",
+    xlim = c(0, 1)
+  )
+  mtext(
+    side = 2, str_c("Max Depth = ", max_depth), line = 2.5, cex = 1,
+    font.lab = 2
+  )
+  
+  # Iterations of interest----
+  ## Start of iterations
+  scores_hist_start <- scores_hist[[1]]
+  metrics_start <- metrics_xgb_current_test |>
+    filter(nb_iter == scores_hist_start$nb_iter)
+  plot_bp_interest(
+    metrics_interest = metrics_start,
+    scores_hist_interest = scores_hist_start,
+    label = "Start"
+  )
+  
+  ## End of iterations
+  scores_hist_end <- scores_hist[[length(scores_hist)]]
+  metrics_end <- metrics_xgb_current_test |>
+    filter(nb_iter == scores_hist_end$nb_iter)
+  plot_bp_interest(
+    metrics_interest = metrics_end,
+    scores_hist_interest = scores_hist_end,
+    label = "End"
+  )
+  
+  ## Iteration with min MSE on validation set
+  nb_iter_mse <-
+    metrics_xgb_current_valid |> arrange(mse) |>
+    dplyr::slice(1) |> 
+    pull("nb_iter")
+  # Metrics at the same iteration on the test set
+  metrics_min_mse <- 
+    metrics_xgb_current_test |> filter(nb_iter == !!nb_iter_mse)
+  # Note: indexing at 0 here...
+  ind_mse <- which(map_dbl(scores_hist, "nb_iter") == nb_iter_mse)
+  scores_hist_min_mse <- scores_hist[[ind_mse]]
+  plot_bp_interest(
+    metrics_interest = metrics_min_mse,
+    scores_hist_interest = scores_hist_min_mse,
+    label = "MSE*"
+  )
+  
+  ## Iteration with max AUC on validation set
+  nb_iter_auc <-
+    metrics_xgb_current_valid |> arrange(desc(AUC)) |>
+    dplyr::slice(1) |> 
+    pull("nb_iter")
+  metrics_max_auc <- 
+    metrics_xgb_current_test |> filter(nb_iter == !!nb_iter_auc)
+  # Note: indexing at 0 here...
+  ind_auc <- which(map_dbl(scores_hist, "nb_iter") == nb_iter_auc)
+  scores_hist_max_auc <- scores_hist[[ind_auc]]
+  plot_bp_interest(
+    metrics_interest = metrics_max_auc,
+    scores_hist_interest = scores_hist_max_auc,
+    label = "AUC*"
+  )
+  mtext(
+    side = 2, str_c("Max Depth = ", max_depth), line = 2.5, cex = 1,
+    font.lab = 2
+  )
+  
+  ## Min Brier on validation set
+  nb_iter_brier <-
+    metrics_xgb_current_valid |> arrange(brier) |>
+    dplyr::slice(1) |> 
+    pull("nb_iter")
+  metrics_min_brier <-
+    metrics_xgb_current_test |> filter(nb_iter == !!nb_iter_brier)
+  ind_brier <- which(map_dbl(scores_hist, "nb_iter") == nb_iter_brier)
+  scores_hist_min_brier <- scores_hist[[ind_brier]]
+  plot_bp_interest(
+    metrics_interest = metrics_min_brier,
+    scores_hist_interest = scores_hist_min_brier,
+    label = "Brier*"
+  )
+  
+  ## Min ICI on validation set
+  nb_iter_ici <-
+    metrics_xgb_current_valid |> arrange(ici) |>
+    dplyr::slice(1) |> 
+    pull("nb_iter")
+  metrics_min_ici <-
+    metrics_xgb_current_test |> filter(nb_iter == !!nb_iter_ici)
+  ind_ici <- which(map_dbl(scores_hist, "nb_iter") == nb_iter_ici)
+  scores_hist_min_ici <- scores_hist[[ind_ici]]
+  plot_bp_interest(
+    metrics_interest = metrics_min_ici,
+    scores_hist_interest = scores_hist_min_ici,
+    label = "ICI*"
+  )
+  
+  ## Min KL on validation set
+  nb_iter_kl <-
+    metrics_xgb_current_valid |> arrange(KL_20_true_probas) |>
+    dplyr::slice(1) |> 
+    pull("nb_iter")
+  metrics_min_kl <-
+    metrics_xgb_current_test |> filter(nb_iter == !!nb_iter_kl)
+  ind_kl <- which(map_dbl(scores_hist, "nb_iter") == nb_iter_kl)
+  scores_hist_min_kl <- scores_hist[[ind_kl]]
+  plot_bp_interest(
+    metrics_interest = metrics_min_kl,
+    scores_hist_interest = scores_hist_min_kl,
+    label = "KL*"
+  )
+}
+```
+
+
+Let us plot the distributions for the first replication of the simulations of each scenario.
+```{r}
+repn <- 1
+```
+
+
+:::{.panel-tabset}
+
+```{r, echo=FALSE}
+tb_labs <- tibble(scenario = 1:16) |> 
+  mutate(
+    dgp = case_when(
+      scenario %in% 1:4 ~ 1,
+      scenario %in% 5:8 ~ 2,
+      scenario %in% 9:12 ~ 3,
+      scenario %in% 13:16 ~ 4
+    ),
+    no_noise = c(0, 10, 50, 100)[(scenario-1)%%4 + 1]
+  ) |> 
+  mutate(
+    label = str_c("Distribution of scores on the test set (DGP ", dgp, ", ", no_noise, " noise variables)")
+  ) |> 
+  mutate(i_row = row_number())
+
+plot_distrib_config <- function(i_values){
+  res <- purrr::map_chr(i_values, \(i) {
+    knitr::knit_child(
+      input = "children-dir/xgb-scores-distrib.qmd", 
+      envir = environment(), 
+      quiet = TRUE
+    )
+  })
+  
+  cat(res, sep = '\n')
+}
+```
+
+
+#### DGP 1
+
+::::{.panel-tabset}
+```{r plots-scores-xgb-1}
+#| output: asis
+#| echo: false
+plot_distrib_config(1:4)
+```
+::::
+
+#### DGP 2
+
+::::{.panel-tabset}
+```{r plots-scores-xgb-2}
+#| output: asis
+#| echo: false
+plot_distrib_config(5:8)
+```
+::::
+
+#### DGP 3
+
+::::{.panel-tabset}
+```{r plots-scores-xgb-3}
+#| output: asis
+#| echo: false
+plot_distrib_config(9:12)
+```
+::::
+
+#### DGP 4
+
+::::{.panel-tabset}
+```{r plots-scores-xgb-4}
+#| output: asis
+#| echo: false
+plot_distrib_config(13:16)
+```
+::::
+
+:::
+
+
+```{r, eval=FALSE, echo=FALSE}
+# figures for the paper
+# for (dgp in 1:4) {
+#   for (noise in 1:4) {
+#     scenario <- ((1:4) + 4*(dgp-1))[noise]
+#     
+#     pdf(
+#       file = str_c("figures/bp_synthetic_xgb_", 
+#                    str_c(dgp, "-", c(0, 10, 50, 100)[noise]), ".pdf"),
+#       width = 12, height = 14
+#     )
+#     par(mfrow = c(2*3,4))
+#     plot_bp_xgb(scenario = scenario, repn = repn, max_depth = 2)
+#     plot_bp_xgb(scenario = scenario, repn = repn, max_depth = 4)
+#     plot_bp_xgb(scenario = scenario, repn = repn, max_depth = 6)
+#     dev.off()
+#   }
+# }
+plot_bp_xgb_2 <- function(scenario, repn) {
+  # Focus on current scenario
+  scores_hist_scenario <- scores_hist_all[[scenario]]
+  # Focus on a particular replication
+  scores_hist_repn <- scores_hist_scenario[[repn]]
+  # (length 3, one for each max_depth)
+  
+  ref_max_depth <- grid$max_depth
+  
+  # # Focus on a value for max_depth
+  # max_depth_val <- map_dbl(scores_hist_repn, ~.x[[1]]$max_depth)
+  # i_max_depth <- which(max_depth_val == max_depth)
+  # scores_hist <- scores_hist_repn[[i_max_depth]]
+  
+  # The metrics for the corresponding simulations
+  metrics_xgb_current_valid <-
+    metrics_xgb_all |>
+    filter(
+      scenario == !!scenario,
+      repn == !!repn,
+      max_depth == !!ref_max_depth,
+      sample == "Validation"
+    )
+  # and on the test set
+  metrics_xgb_current_test <-
+    metrics_xgb_all |>
+    filter(
+      scenario == !!scenario,
+      repn == !!repn,
+      max_depth == !!ref_max_depth,
+      sample == "Test"
+    )
+  
+  # True Probabilities
+  simu_data <- simulate_data_wrapper(
+    scenario = scenario,
+    params_df = params_df,
+    repn = repn # only one replication here
+  )
+  true_prob <- simu_data$data$probs_train
+  hist(
+    true_prob,
+    breaks = seq(0, 1, by = .05),
+    xlab = "p", ylab = "",
+    main = "True Probabilities",
+    xlim = c(0, 1)
+  )
+  mtext(
+    side = 2,
+    str_c(c(0, 10, 50, 100)[(scenario-1) %% 4 + 1], " noise variables"),
+    line = 2.5, cex = 1,
+    font.lab = 2
+  )
+  
+  ## Iteration with min MSE on validation set
+  nb_iter_mse <-
+    metrics_xgb_current_valid |> arrange(mse) |>
+    dplyr::slice(1) |>
+    pull("nb_iter")
+  # Metrics at the same iteration on the test set
+  metrics_min_mse <-
+    metrics_xgb_current_test |> filter(nb_iter == !!nb_iter_mse)
+  # Note: indexing at 0 here...
+  ind_mse <- which(
+    map_dbl(
+      scores_hist_repn[[match(metrics_min_mse$max_depth, c(2,4,6))]], 
+      "nb_iter"
+    ) == nb_iter_mse
+  )
+  scores_hist_min_mse <-
+    scores_hist_repn[[match(metrics_min_mse$max_depth, c(2,4,6))]][[ind_mse]]
+  plot_bp_interest(
+    metrics_interest = metrics_min_mse,
+    scores_hist_interest = scores_hist_min_mse,
+    label = "MSE*"
+  )
+  
+  ## Iteration with max AUC on validation set
+  nb_iter_auc <-
+    metrics_xgb_current_valid |> arrange(desc(AUC)) |>
+    dplyr::slice(1) |>
+    pull("nb_iter")
+  metrics_max_auc <-
+    metrics_xgb_current_test |> filter(nb_iter == !!nb_iter_auc)
+  # Note: indexing at 0 here...
+  ind_auc <- which(
+    map_dbl(
+      scores_hist_repn[[match(metrics_max_auc$max_depth, c(2,4,6))]], 
+      "nb_iter"
+    ) == nb_iter_auc
+  )
+  scores_hist_max_auc <-
+    scores_hist_repn[[match(metrics_max_auc$max_depth, c(2,4,6))]][[ind_auc]]
+  plot_bp_interest(
+    metrics_interest = metrics_max_auc,
+    scores_hist_interest = scores_hist_max_auc,
+    label = "AUC*"
+  )
+  # mtext(
+  #   side = 2, str_c("Max Depth = ", metrics_max_auc$max_depth), line = 2.5, cex = 1,
+  #   font.lab = 2
+  # )
+  
+  ## Min Brier on validation set
+  nb_iter_brier <-
+    metrics_xgb_current_valid |> arrange(brier) |>
+    dplyr::slice(1) |>
+    pull("nb_iter")
+  metrics_min_brier <-
+    metrics_xgb_current_test |> filter(nb_iter == !!nb_iter_brier)
+  ind_brier <- which(
+    map_dbl(
+      scores_hist_repn[[match(metrics_min_brier$max_depth, c(2,4,6))]], 
+      "nb_iter"
+    ) == nb_iter_brier
+  )
+  scores_hist_min_brier <-
+    scores_hist_repn[[match(metrics_min_brier$max_depth, c(2,4,6))]][[ind_brier]]
+  plot_bp_interest(
+    metrics_interest = metrics_min_brier,
+    scores_hist_interest = scores_hist_min_brier,
+    label = "Brier*"
+  )
+  
+  ## Min ICI on validation set
+  nb_iter_ici <-
+    metrics_xgb_current_valid |> arrange(ici) |>
+    dplyr::slice(1) |>
+    pull("nb_iter")
+  metrics_min_ici <-
+    metrics_xgb_current_test |> filter(nb_iter == !!nb_iter_ici)
+  ind_ici <- which(
+    map_dbl(
+      scores_hist_repn[[match(metrics_min_ici$max_depth, c(2,4,6))]], 
+      "nb_iter"
+    ) == nb_iter_ici
+  )
+  scores_hist_min_ici <-
+    scores_hist_repn[[match(metrics_min_ici$max_depth, c(2,4,6))]][[ind_ici]]
+  plot_bp_interest(
+    metrics_interest = metrics_min_ici,
+    scores_hist_interest = scores_hist_min_ici,
+    label = "ICI*"
+  )
+  
+  ## Min KL on validation set
+  nb_iter_kl <-
+    metrics_xgb_current_valid |> arrange(KL_20_true_probas) |>
+    dplyr::slice(1) |>
+    pull("nb_iter")
+  metrics_min_kl <-
+    metrics_xgb_current_test |> filter(nb_iter == !!nb_iter_kl)
+  ind_kl <- which(
+    map_dbl(
+      scores_hist_repn[[match(metrics_min_kl$max_depth, c(2,4,6))]], 
+      "nb_iter"
+    ) == nb_iter_kl
+  )
+  scores_hist_min_kl <-
+    scores_hist_repn[[match(metrics_min_kl$max_depth, c(2,4,6))]][[ind_kl]]
+  plot_bp_interest(
+    metrics_interest = metrics_min_kl,
+    scores_hist_interest = scores_hist_min_kl,
+    label = "KL*"
+  )
+}
+
+for (dgp in 1:4) {
+  scenarios <- (1:4) + 4 * (dgp - 1)
+  pdf(
+    file = str_c("figures/bp_synthetic_xgb_", dgp, ".pdf"),
+    width = 13, height = 8
+  )
+  par(mfrow = c(4,6))
+  for (scenario in scenarios) {
+    plot_bp_xgb_2(scenario = scenario, repn = repn)
+  }
+  dev.off()
+}
+```
+
+
+
+### KL Divergence and Calibration along Boosting Iterations
+
+We can examine the evolution of the relationship between the divergence of score distributions from true probabilities and model calibration across increasing boosting iterations.
+
+```{r define-df_plot}
+#| code-fold: true
+#| code-summary: Codes to create the figure
+#| fig-cap: KL Divergence and Calibration across increasing boosting iterations
+#| label: fig-kl-calib-xgb-iterations
+#| fig-width: 10
+#| fig-height: 8
+df_plot <- 
+  metrics_xgb_all |> 
+  mutate(
+    dgp = case_when(
+      scenario %in% 1:4 ~ 1,
+      scenario %in% 5:8 ~ 2,
+      scenario %in% 9:12 ~ 3,
+      scenario %in% 13:16 ~ 4
+    ),
+    dgp = factor(dgp, levels = 1:4, labels = str_c("DGP ", 1:4)),
+    no_noise = c(0, 10, 50, 100)[(scenario-1)%%4 + 1],
+    no_noise = factor(
+        no_noise, levels = c(no_noise),
+        labels = str_c(no_noise, " noise variables")
+      )
+  ) |> 
+  select(
+    dgp, no_noise, scenario, ind, sample, nb_iter, max_depth, 
+    brier, ici, KL_20_true_probas
+  ) |> 
+  group_by(dgp, no_noise, scenario, ind, sample, nb_iter, max_depth) |> 
+  summarise(
+    brier = mean(brier),
+    ici = mean(ici),
+    KL_20_true_probas = mean(KL_20_true_probas),
+    .groups = "drop"
+  ) |> 
+  mutate(
+    max_depth = factor(
+      max_depth, 
+      levels = c(2, 4, 6)
+    )
+  )
+
+formatter1000 <- function(x) x*1000
+```
+
+::: {.panel-tabset}
+
+#### Brier
+
+```{r}
+#| code-fold: true
+#| code-summary: Codes to create the figure
+#| fig-cap: KL Divergence and Calibration (Brier) across increasing boosting iterations (log scales)
+#| label: fig-kl-calib-brier-xgb-iterations
+#| fig-width: 10
+#| fig-height: 8
+p_brier <- ggplot(
+  data = df_plot |> arrange(nb_iter),
+  mapping = aes(x = brier, y = KL_20_true_probas)
+) +
+  geom_path(
+    mapping = aes(colour = sample, linetype = max_depth), 
+    arrow = arrow(type = "closed", ends = "last", 
+                  length = unit(0.08, "inches"))
+  ) +
+  # facet_wrap(~scenario) +
+    ggh4x::facet_grid2(dgp~no_noise, scales = "free_y", independent = "y") +
+  labs(
+    x = latex2exp::TeX("Calibration (Brier), $\\times 10^{3}$, log scale"), 
+    y = "KL Divergence"
+  ) +
+  scale_x_log10(labels = formatter1000) + scale_y_log10() +
+  scale_colour_manual("Sample", values = colour_samples) +
+  scale_linetype_discrete("Max Depth") +
+  theme_paper() +
+  theme(legend.key.width = unit(1.5, "cm"))
+
+
+ggsave(p_brier, file = "figures/xgb-kl-calib-brier-leaves-all.pdf",
+       width = 10, height = 8)
+
+p_brier
+```
+
+#### ICI
+
+:::
+
+```{r}
+#| code-fold: true
+#| code-summary: Codes to create the figure
+#| fig-cap: KL Divergence and Calibration (ICI) across increasing boosting iterations (log scales)
+#| label: fig-kl-calib-ici-xgb-iterations
+#| fig-width: 10
+#| fig-height: 8
+p_ici <- ggplot(
+  data = df_plot |> arrange(nb_iter),
+  mapping = aes(x = ici, y = KL_20_true_probas)
+) +
+  geom_path(
+    mapping = aes(colour = sample, linetype = max_depth), 
+    arrow = arrow(type = "closed", ends = "last", 
+                  length = unit(0.08, "inches"))
+  ) +
+  # facet_wrap(~scenario) +
+    ggh4x::facet_grid2(dgp~no_noise, scales = "free_y", independent = "y") +
+  labs(
+    x = latex2exp::TeX("Calibration (ICI), $\\times 10^{3}$, log scale"), 
+    y = "KL Divergence"
+  ) +
+  scale_x_log10(labels = formatter1000) + scale_y_log10() +
+  scale_colour_manual("Sample", values = colour_samples) +
+  scale_linetype_discrete("Max Depth") +
+  theme_paper() +
+  theme(legend.key.width = unit(1.5, "cm"))
+
+
+ggsave(p_ici, file = "figures/xgb-kl-calib-ici-leaves-all.pdf",
+       width = 10, height = 8)
+
+p_ici
+```
+
+

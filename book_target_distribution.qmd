@@ -1,0 +1,282 @@
+# Targeted Distribution {#sec-target-distributions}
+
+<!-- In the terminal: -->
+<!-- quarto add leovan/quarto-pseudocode -->
+
+
+:::{.callout-note}
+
+In this chapter, we provide some codes to simulate a dataset with a binary variable for which the underlying probability follows a targeted distribution. We consider here, as an example, that we would like the true probabilities to follow a Beta(2,2) distribution.
+
+:::
+
+
+
+:::{.callout-warning}
+
+## Code Availability
+
+The functions used to subsample from a dataset so that the true probabilities in that subsample follows a target distribution are saved in the `functions/subsample_target_distrib.r`.
+
+:::
+
+```{r}
+library(ks)
+library(tidyverse)
+```
+
+## Algorithm
+
+
+In our generated sample, $\mathcal{D}=\{(\boldsymbol{x}_i,y_i,{s}_i),i\in\{1,\cdots,n\}\}$, let $\widehat{f}$ denote the (empirical) density of scores. For the various scenarios, suppose that we want a specific distribution for the scores, denoted $g$ (uniform, Beta, etc.). A classical idea is to use ''rejection sampling'' techniques to create a subsample of the dataset. Set 
+$$
+c = \sup_{s\in(0,1)} \frac{\widehat{f}(s)}{g(s)} \leq \infty.
+$$
+If $c$ is finite, and not too large, we can use the standard rejection technique, described in @alg-cap-1. In a nutshell, point $i$ is kept with probability $(cg(s_i))^{-1}\widehat{f}(s_i)$.
+
+
+
+
+```pseudocode
+#| label: alg-cap-1
+#| html-indent-size: "1.2em"
+#| html-comment-delimiter: "//"
+#| html-line-number: true
+#| html-line-number-punc: ":"
+#| html-no-end: false
+#| pdf-placement: "htb!"
+#| pdf-line-number: true
+
+\begin{algorithm}
+\caption{Subsample a dataset so that the distribution of scores has density $g$ (Rejection, $c$ small)}
+\begin{algorithmic}
+\Require $\mathcal{D}=\{(\boldsymbol{x}_i,y_i,{s}_i),i\in\{1,\cdots,n\}\}$ and $g$ (target density)
+\State $\mathcal{I} \gets ,i\in\{1,\cdots,n\}$
+\State $\widehat{f} \gets$ density of $\{({s}_i),i\in\mathcal{I}\}$, using Chen (1999)
+\State $c = \displaystyle\sup_{s\in(0,1)} \frac{\widehat{f}(s)}{g(s)} \gets \max_{i=1,\cdots,n}\displaystyle\frac{\widehat{f}(s_i)}{g(s_i)} $
+\For{$i\in\{1,\cdots,n\}$}
+    \State $U \gets \mathcal{U}([0,1])$
+    \If{$\displaystyle U > \frac{\widehat{f}(s_i)}{c\,g(s_i)}$}
+        \State $\mathcal{I} \gets \mathcal{I}\backslash\{i\}$ , i.e. ``reject"
+\EndIf 
+\EndFor
+\State $s\mathcal{D}=\{(\boldsymbol{x}_i,y_i,{s}_i),i\in\mathcal{I}\}$
+\end{algorithmic}
+\end{algorithm}
+```
+
+Note: the reference mentioned: @chen1999beta
+
+If $c$ is too large, we use an iterative algorithm, described in @alg-cap-2, inspired by @rumbell2023novel (alternative options could be the ''Empirical Supremum Rejection Sampling'' introduced in @caffo2002empirical, for instance)
+
+
+```pseudocode
+#| label: alg-cap-2
+#| html-indent-size: "1.2em"
+#| html-comment-delimiter: "//"
+#| html-line-number: true
+#| html-line-number-punc: ":"
+#| html-no-end: false
+#| pdf-placement: "htb!"
+#| pdf-line-number: true
+
+\begin{algorithm}
+\caption{Subsample a dataset so that the distribution of scores has density $g$ (Iterative Rejection, $c$ large)}
+\begin{algorithmic}
+\Require $\mathcal{D}=\{(\boldsymbol{x}_i,y_i,{s}_i),i\in\{1,\cdots,n\}\}$, $\epsilon>0$ and $g$ (target density)
+\State $\mathcal{I} \gets \{1,\cdots,n\}$
+\State $\widehat{f} \gets$ density of $\{({s}_i),i\in\mathcal{I}\}$, using Chen (1999)
+\State $d \gets \|\widehat{F}-G\|_{\infty}$ (Kolmogorov-Smirnov distance)
+\While{$d>\epsilon$}
+\State $\mathcal{J} \gets \mathcal{I}$
+\For{$i\in\mathcal{I}$}
+    \State $U \gets \mathcal{U}([0,1])$
+    \If{$\displaystyle U>\frac{\widehat{f}(s_i)}{g(s_i)}$}
+        \State $\mathcal{J} \gets \mathcal{J}\backslash\{i\}$ , i.e. 'reject' observation $i$
+    \EndIf 
+\EndFor
+\State $\mathcal{I} \gets \mathcal{J}$
+\State $\widehat{f} \gets$ density of $\{({s}_i),i\in\mathcal{I}\}$
+\State $d \gets \|\widehat{F}-G\|_{\infty}$ 
+\EndWhile
+\State $s\mathcal{D}=\{(\boldsymbol{x}_i,y_i,{s}_i),i\in\mathcal{I}\}$
+\end{algorithmic}
+\end{algorithm}  
+```
+
+To implement this, we define the `subset_target()`{.R} function.
+
+```{r define-subset_target}
+#' @param data dataset
+#' @param score_name name of the column in data that contains the scores
+#' @param target_fun target distribution function.
+#' @param iter number of iterations.
+#' @param draw if TRUE (default) the distribution of scores (gray bars) and the
+#'  target distribution (in red) are plotted at each iteration.
+#' @seed if not `NULL`, seed to use
+#' @param data dataset
+#' @param probs_name name of the column in data that contains the observed
+#'  probabilities
+#' @param target_fun target distribution function.
+#' @param iter number of iterations.
+#' @param draw if TRUE (default) the distribution of scores (gray bars) and the
+#'  target distribution (in red) are plotted at each iteration.
+#' @seed if not `NULL`, seed to use
+#' @param verbose if `FALSE`, size of subsamplings at each iteration and KS test
+#'  results are hiddent
+subset_target <- function(data,
+                          probs_name,
+                          target_fun = function(x) dbeta(x,2,2),
+                          iter = 1,
+                          draw = TRUE,
+                          seed = NULL,
+                          verbose = TRUE){
+  select <- rep(nrow(data),iter + 1)
+  if (!is.null(seed)) set.seed(seed)
+
+  # Get the scores from the dataset
+  probs_01 <- data |> pull(!!probs_name)
+  if (verbose == TRUE) cat("1) Size ...... ", nrow(data), "\n", sep = "")
+
+  # Kolmogorov-Smirnov Test
+  fun <- Vectorize(function(x) integrate(target_fun, 0, x)$value)
+  K <- ks.test(probs_01, fun)
+
+  if (verbose) {
+    cat("1)  ks ............ ", K$statistic, "\n", sep = "")
+    cat("1)  (pvalue) ...... ", K$p.value, "\n", sep = "")
+  }
+
+  if (draw) {
+    # Histogram of scores (gray) and target distribution (red)
+    hist(probs_01,probability = TRUE, xlab = "", ylab = "", main = "Initial")
+    val_x <- seq(0,1,length = 601)
+    lines(val_x,target_fun(val_x), col = "red")
+  }
+
+  data_subset <- data
+
+  for (k in 1:iter) {
+    n <- nrow(data_subset)
+    initial_density <- kde(x = probs_01, eval.points = probs_01)
+    # Probability to include each observation in the current subset
+    prob_acceptation <- target_fun(probs_01) / initial_density$estimate
+    prob_acceptation <- pmin(prob_acceptation / max(prob_acceptation), 1)
+    # For each scores from the current data subset, decide whether or not to
+    # include it based on a random draw from a Ber(prob_acceptation)
+    index_acceptation <- rbinom(n, size = 1, prob = prob_acceptation)
+    # Use this index to keep only the selected data
+    data_subset <- data_subset[which(index_acceptation ==1 ), ]
+    select[k + 1] <- nrow(data_subset)
+    probs_01 <- data_subset |> pull(!!probs_name)
+    if (verbose == TRUE)
+      cat(k + 1, ") Size ...... ", nrow(data_subset), "\n", sep = "")
+    # Kolmogorov-Smirnov Test
+    K <- ks.test(probs_01, fun)
+    if (verbose) {
+      cat(k + 1, ")   ks ............ ", K$statistic, "\n", sep = "")
+      cat(k + 1, ")   (pvalue) ...... ", K$p.value, "\n", sep = "")
+    }
+    if (draw) {
+      hist(
+        probs_01, probability = TRUE, xlab = "", ylab = "",
+        main = paste("Iteration ", k)
+      )
+      val_x <- seq(0, 1, length = 601)
+      lines(val_x, target_fun(val_x), col = "red")
+    }
+  }
+  data_subset
+}
+```
+
+## First Example
+
+Let us begin with generating some binary data, using a linear predictor for the true probability.
+```{r}
+n <- 1e5 # Number of obs.
+# Covariates
+x1 <- rnorm(n)
+x2 <- rnorm(n)
+# True probabilities
+p <- function(x1, x2) .4 * x1 - .2*x2
+# Observed event
+y <- rnorm(n,p(x1, x2), .4)
+tb <- tibble(y = y, x1 = x1, x2 = x2)
+```
+
+
+Let us consider a linear model to predict the observed event:
+```{r}
+reg <- lm(y ~ x1 + x2, data = tb)
+scores <- predict(reg)
+tb$scores <- scores
+```
+
+Keeping only scores between 0 and 1 (would not need to do so for glm)
+
+```{r}
+tb_01 <- tb[(scores > 0) & (scores < 1), ]
+data <- tb_01
+```
+
+
+```{r}
+B <- subset_target(data = data, probs_name = "scores", iter = 4)
+```
+
+Let us consider another example.
+
+```{r}
+library(splines)
+```
+
+## Second Examplle
+
+We generate another dataset.
+```{r}
+n <- 1e6
+x <- rbeta(n, 1, 2)
+y <- rbinom(n, size = 1, prob = x)
+base <- tibble(
+  x = x,
+  y = y,
+  id = 1:n
+)
+```
+
+Let us assume that the scores are estimated using a logistic model.
+```{r}
+reg <- glm(y ~ bs(x), data = base, family = binomial)
+base$scores <- predict(reg, type = "response")
+```
+
+Let us further assume that we want the scores to be distributed according to a Beta(2,1).
+```{r}
+B <- subset_target(
+  data = base, 
+  probs_name = "scores", 
+  iter = 1, 
+  target_fun = function(x) dbeta(x,2,1)
+)
+```
+
+We check the new observations:
+```{r}
+reg2 <- glm(y ~ bs(x), data = B, family = binomial)
+```
+
+```{r}
+val_x <- seq(0, 1, length = 601)
+plot(
+  val_x,
+  predict(reg, type = "response", newdata = data.frame(x = val_x)),
+  type = "l", lwd = 2
+)
+lines(
+  val_x,
+  predict(reg2, type = "response", newdata = data.frame(x = val_x)),
+  type = "l", lwd = 2, col = "red"
+)
+```
+
