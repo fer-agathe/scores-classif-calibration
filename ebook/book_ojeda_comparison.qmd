@@ -448,7 +448,7 @@ models_interest_rf <- rf_of_interest |>
 scenarios <- 1:16
 ```
 
-Let us load the estimated models from [Chapter -@sec-simul-sgb].
+Let us load the estimated models from [Chapter -@sec-simul-xgb].
 ```{r}
 files <- str_c(
   "output/simul/dgp-ojeda/resul_xgb_scenario_", scenarios, ".rda"
