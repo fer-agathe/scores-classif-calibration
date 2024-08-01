@@ -407,7 +407,7 @@ Note
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>We follow <span class="citation" data-cites="Ojeda_2023">Ojeda et al. (<a href="#ref-Ojeda_2023" role="doc-biblioref">2023</a>)</span> to generate data. They kindly provide two functions to simulate binary in the supplementary materials of their article. We adapt their codes to generate the first 12 scenarios from their article.</p>
+<p>We follow <span class="citation" data-cites="Ojeda_2023">Ojeda et al. (<a href="references.html#ref-Ojeda_2023" role="doc-biblioref">2023</a>)</span> to generate data. They kindly provide two functions to simulate binary in the supplementary materials of their article. We adapt their codes to generate the first 12 scenarios from their article.</p>
 <p>We add another type of scenarios to generate the data, so that the predictor is no longer linear.</p>
 </div>
 </div>
@@ -468,7 +468,7 @@ Code Availability
 </div>
 <section id="functions" class="level2" data-number="4.1">
 <h2 data-number="4.1" class="anchored" data-anchor-id="functions"><span class="header-section-number">4.1</span> Functions</h2>
-<p>We load the functions from <a href="#sec-target-distributions" class="quarto-xref">Chapter&nbsp;<span class="quarto-unresolved-ref ref-noprefix">sec-target-distributions</span></a> to subsample from a dataset so that the true probability follows a beta distribution.</p>
+<p>We load the functions from <a href="book_target_distribution.html" class="quarto-xref">Chapter&nbsp;<span>2</span></a> to subsample from a dataset so that the true probability follows a beta distribution.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ks)</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"functions/subsample_target_distribution.R"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -705,7 +705,7 @@ Code Availability
 </section>
 <section id="scenarios" class="level2" data-number="4.2">
 <h2 data-number="4.2" class="anchored" data-anchor-id="scenarios"><span class="header-section-number">4.2</span> Scenarios</h2>
-<p>Let us define the 12 first scenarios, using the code provided in <span class="citation" data-cites="Ojeda_2023">Ojeda et al. (<a href="#ref-Ojeda_2023" role="doc-biblioref">2023</a>)</span>.</p>
+<p>Let us define the 12 first scenarios, using the code provided in <span class="citation" data-cites="Ojeda_2023">Ojeda et al. (<a href="references.html#ref-Ojeda_2023" role="doc-biblioref">2023</a>)</span>.</p>
 <ul>
 <li><p><strong>DGP 1</strong>:</p>
 <ul>
@@ -825,7 +825,7 @@ Code Availability
 </section>
 <section id="example" class="level2" data-number="4.3">
 <h2 data-number="4.3" class="anchored" data-anchor-id="example"><span class="header-section-number">4.3</span> Example</h2>
-<p>Let us draw a sample of 10,000 observation in the train and the test set, for each scenario. We can then plot the histogram of the true probabilities in each sample (<a href="#fig-hist-true-prob-ojeda" class="quarto-xref">Figure&nbsp;<span class="quarto-unresolved-ref">fig-hist-true-prob-ojeda</span></a>).</p>
+<p>Let us draw a sample of 10,000 observation in the train and the test set, for each scenario. We can then plot the histogram of the true probabilities in each sample (<a href="#fig-hist-true-prob-ojeda" class="quarto-xref">Figure&nbsp;<span>4.1</span></a>).</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
@@ -929,7 +929,7 @@ Figure&nbsp;4.2: Distribution of the underlying probabilities in the different c
 </div>
 
 
-<div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" role="list">
+<div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" role="list" style="display: none">
 <div id="ref-Ojeda_2023" class="csl-entry" role="listitem">
 Ojeda, Francisco M., Max L. Jansen, Alexandre Thiéry, Stefan Blankenberg, Christian Weimar, Matthias Schmid, and Andreas Ziegler. 2023. <span>“Calibrating Machine Learning Approaches for Probability Estimation: A Comprehensive Comparison.”</span> <em>Statistics in Medicine</em> 42 (29): 5451–78. <a href="https://doi.org/10.1002/sim.9921">https://doi.org/10.1002/sim.9921</a>.
 </div>
