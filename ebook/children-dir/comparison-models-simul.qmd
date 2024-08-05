@@ -4,7 +4,7 @@
 #| echo: false
 #| warning: false
 #| fig-cap: !expr glue::glue("{tb_labs |> slice(i) |> pull(label)}")
-#| fig-width: 10
+#| fig-width: 8.5
 scenario_number <- tb_labs |> slice(i) |> pull("scenario")
 calib_metric <- tb_labs |> slice(i) |> pull("calib_metric")
 plot_comparison(scenario = scenario_number, calib_metric = calib_metric)

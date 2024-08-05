@@ -101,6 +101,7 @@ load("output/real-data/priors_abalone.rda")
 ```{r}
 #| fig-cap: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the Abalone dataset.
 #| label: fig-example-beta-abalone
+#| fig-width: 5
 plot_hist_scores_beta(priors_abalone, "abalone")
 ```
 
@@ -184,6 +185,7 @@ load("output/real-data/priors_adult.rda")
 ```{r}
 #| fig-cap: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the Adult dataset.
 #| label: fig-example-beta-adult
+#| fig-width: 5
 plot_hist_scores_beta(priors_adult, "adult")
 ```
 
@@ -343,6 +345,7 @@ load("output/real-data/priors_bank.rda")
 ```{r}
 #| fig-cap: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the Bank Marketing dataset.
 #| label: fig-example-beta-bank
+#| fig-width: 5
 plot_hist_scores_beta(priors_bank, "bank")
 ```
 
@@ -425,6 +428,7 @@ load("output/real-data/priors_default.rda")
 ```{r}
 #| fig-cap: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the Default of Credit Card Clients dataset.
 #| label: fig-example-beta-default
+#| fig-width: 5
 plot_hist_scores_beta(priors_default, "default")
 ```
 
@@ -493,6 +497,7 @@ load("output/real-data/priors_drybean.rda")
 ```{r}
 #| fig-cap: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the Dry Bean dataset.
 #| label: fig-example-beta-drybean
+#| fig-width: 5
 plot_hist_scores_beta(priors_drybean, "drybean")
 ```
 
@@ -570,6 +575,7 @@ load("output/real-data/priors_coupon.rda")
 ```{r}
 #| fig-cap: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the In-Vehicle Coupon Recommendation dataset.
 #| label: fig-example-beta-coupon
+#| fig-width: 5
 plot_hist_scores_beta(priors_coupon, "coupon")
 ```
 
@@ -716,6 +722,7 @@ load("output/real-data/priors_mushroom.rda")
 ```{r}
 #| fig-cap: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the Mushroom dataset.
 #| label: fig-example-beta-mushroom
+#| fig-width: 5
 plot_hist_scores_beta(priors_mushroom, "mushroom")
 ```
 
@@ -806,6 +813,7 @@ load("output/real-data/priors_occupancy.rda")
 ```{r}
 #| fig-cap: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the Occupancy Detection dataset.
 #| label: fig-example-beta-occupancy
+#| fig-width: 5
 plot_hist_scores_beta(priors_occupancy, "occupancy")
 ```
 
@@ -1052,6 +1060,7 @@ load("output/real-data/priors_winequality.rda")
 ```{r}
 #| fig-cap: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the Wine Quality dataset.
 #| label: fig-example-beta-winequality
+#| fig-width: 5
 plot_hist_scores_beta(priors_winequality, "winequality")
 ```
 
@@ -1146,6 +1155,7 @@ load(str_c("output/real-data/priors_", name, ".rda"))
 ```{r}
 #| fig-cap: Distribution of estimated probabilities by the GAMSEL model and Beta distribution fitted to the scores of each of the three models, for the spambase dataset.
 #| label: fig-example-beta-spambase
+#| fig-width: 5
 plot_hist_scores_beta(priors_spambase, "spambase")
 ```
 
