@@ -98,11 +98,11 @@ div.csl-indent {
 <script src="site_libs/quarto-contrib/pseudocode-2.4.1/pseudocode.min.js"></script>
 <link href="site_libs/quarto-contrib/pseudocode-2.4.1/pseudocode.min.css" rel="stylesheet">
 <script id="quarto-search-options" type="application/json">{
-  "location": "sidebar",
+  "location": "navbar",
   "copy-button": false,
   "collapse-after": 3,
-  "panel-placement": "start",
-  "type": "textbox",
+  "panel-placement": "end",
+  "type": "overlay",
   "limit": 50,
   "keyboard-shortcut": [
     "f",
@@ -179,10 +179,34 @@ window.Quarto = {
 
 </head>
 
-<body class="nav-sidebar floating">
+<body class="nav-sidebar floating nav-fixed">
 
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">Probabilistic Scores of Classifiers: Calibration is not Enough</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/fer-agathe/scores-classif-calibration"> <i class="bi bi-github" role="img" aria-label="GitHub">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+          <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
   <nav class="quarto-secondary-nav">
     <div class="container-fluid d-flex">
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
@@ -191,26 +215,13 @@ window.Quarto = {
         <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./book_target_distribution.html">Subsampling</a></li><li class="breadcrumb-item"><a href="./book_target_distribution.html"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Targeted Distribution</span></a></li></ol></nav>
         <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
-      <button type="button" class="btn quarto-search-button" aria-label="" onclick="window.quartoOpenSearch();">
-        <i class="bi bi-search"></i>
-      </button>
     </div>
   </nav>
 </header>
 <!-- content -->
-<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
   <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
-    <div class="pt-lg-2 mt-2 text-left sidebar-header">
-    <div class="sidebar-title mb-0 py-0">
-      <a href="./">Probabilistic Scores of Classifiers: Calibration is not Enough</a> 
-    </div>
-      </div>
-        <div class="mt-2 flex-shrink-0 align-items-center">
-        <div class="sidebar-search">
-        <div id="quarto-search" class="" title="Search"></div>
-        </div>
-        </div>
     <div class="sidebar-menu-container"> 
     <ul class="list-unstyled mt-1">
         <li class="sidebar-item">
@@ -446,14 +457,14 @@ Code Availability
 <p>In our generated sample, <span class="math inline">\(\mathcal{D}=\{(\boldsymbol{x}_i,y_i,{s}_i),i\in\{1,\cdots,n\}\}\)</span>, let <span class="math inline">\(\widehat{f}\)</span> denote the (empirical) density of scores. For the various scenarios, suppose that we want a specific distribution for the scores, denoted <span class="math inline">\(g\)</span> (uniform, Beta, etc.). A classical idea is to use ‘’rejection sampling’’ techniques to create a subsample of the dataset. Set <span class="math display">\[
 c = \sup_{s\in(0,1)} \frac{\widehat{f}(s)}{g(s)} \leq \infty.
 \]</span> If <span class="math inline">\(c\)</span> is finite, and not too large, we can use the standard rejection technique, described in <a href="#alg-cap-1">Algorithm 2.1</a>. In a nutshell, point <span class="math inline">\(i\)</span> is kept with probability <span class="math inline">\((cg(s_i))^{-1}\widehat{f}(s_i)\)</span>.</p>
-<div id="alg-cap-1" class="pseudocode-container" data-no-end="false" data-alg-title="Algorithm" data-line-number-punc=":" data-comment-delimiter="//" data-line-number="true" data-pseudocode-index="1" data-indent-size="1.2em">
+<div id="alg-cap-1" class="pseudocode-container" data-alg-title="Algorithm" data-comment-delimiter="//" data-line-number="true" data-line-number-punc=":" data-pseudocode-index="1" data-indent-size="1.2em" data-no-end="false">
 <div class="pseudocode">
 \begin{algorithm} \caption{Subsample a dataset so that the distribution of scores has density $g$ (Rejection, $c$ small)} \begin{algorithmic} \Require $\mathcal{D}=\{(\boldsymbol{x}_i,y_i,{s}_i),i\in\{1,\cdots,n\}\}$ and $g$ (target density) \State $\mathcal{I} \gets ,i\in\{1,\cdots,n\}$ \State $\widehat{f} \gets$ density of $\{({s}_i),i\in\mathcal{I}\}$, using Chen (1999) \State $c = \displaystyle\sup_{s\in(0,1)} \frac{\widehat{f}(s)}{g(s)} \gets \max_{i=1,\cdots,n}\displaystyle\frac{\widehat{f}(s_i)}{g(s_i)} $ \For{$i\in\{1,\cdots,n\}$} \State $U \gets \mathcal{U}([0,1])$ \If{$\displaystyle U &gt; \frac{\widehat{f}(s_i)}{c\,g(s_i)}$} \State $\mathcal{I} \gets \mathcal{I}\backslash\{i\}$ , i.e. ``reject" \EndIf \EndFor \State $s\mathcal{D}=\{(\boldsymbol{x}_i,y_i,{s}_i),i\in\mathcal{I}\}$ \end{algorithmic} \end{algorithm}
 </div>
 </div>
 <p>Note: the reference mentioned: <span class="citation" data-cites="chen1999beta">Chen (<a href="references.html#ref-chen1999beta" role="doc-biblioref">1999</a>)</span></p>
 <p>If <span class="math inline">\(c\)</span> is too large, we use an iterative algorithm, described in <a href="#alg-cap-2">Algorithm 2.2</a>, inspired by <span class="citation" data-cites="rumbell2023novel">Rumbell et al. (<a href="references.html#ref-rumbell2023novel" role="doc-biblioref">2023</a>)</span> (alternative options could be the ‘’Empirical Supremum Rejection Sampling’’ introduced in <span class="citation" data-cites="caffo2002empirical">Caffo, Booth, and Davison (<a href="references.html#ref-caffo2002empirical" role="doc-biblioref">2002</a>)</span>, for instance)</p>
-<div id="alg-cap-2" class="pseudocode-container" data-no-end="false" data-alg-title="Algorithm" data-line-number-punc=":" data-comment-delimiter="//" data-line-number="true" data-pseudocode-index="2" data-indent-size="1.2em">
+<div id="alg-cap-2" class="pseudocode-container" data-alg-title="Algorithm" data-comment-delimiter="//" data-line-number="true" data-line-number-punc=":" data-pseudocode-index="2" data-indent-size="1.2em" data-no-end="false">
 <div class="pseudocode">
 \begin{algorithm} \caption{Subsample a dataset so that the distribution of scores has density $g$ (Iterative Rejection, $c$ large)} \begin{algorithmic} \Require $\mathcal{D}=\{(\boldsymbol{x}_i,y_i,{s}_i),i\in\{1,\cdots,n\}\}$, $\epsilon&gt;0$ and $g$ (target density) \State $\mathcal{I} \gets \{1,\cdots,n\}$ \State $\widehat{f} \gets$ density of $\{({s}_i),i\in\mathcal{I}\}$, using Chen (1999) \State $d \gets \|\widehat{F}-G\|_{\infty}$ (Kolmogorov-Smirnov distance) \While{$d&gt;\epsilon$} \State $\mathcal{J} \gets \mathcal{I}$ \For{$i\in\mathcal{I}$} \State $U \gets \mathcal{U}([0,1])$ \If{$\displaystyle U&gt;\frac{\widehat{f}(s_i)}{g(s_i)}$} \State $\mathcal{J} \gets \mathcal{J}\backslash\{i\}$ , i.e. 'reject' observation $i$ \EndIf \EndFor \State $\mathcal{I} \gets \mathcal{J}$ \State $\widehat{f} \gets$ density of $\{({s}_i),i\in\mathcal{I}\}$ \State $d \gets \|\widehat{F}-G\|_{\infty}$ \EndWhile \State $s\mathcal{D}=\{(\boldsymbol{x}_i,y_i,{s}_i),i\in\mathcal{I}\}$ \end{algorithmic} \end{algorithm}
 </div>
@@ -571,8 +582,8 @@ c = \sup_{s\in(0,1)} \frac{\widehat{f}(s)}{g(s)} \leq \infty.
 <div class="cell">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>B <span class="ot">&lt;-</span> <span class="fu">subset_target</span>(<span class="at">data =</span> data, <span class="at">probs_name =</span> <span class="st">"scores"</span>, <span class="at">iter =</span> <span class="dv">4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>1) Size ...... 49043
-1)  ks ............ 0.2984887
+<pre><code>1) Size ...... 48792
+1)  ks ............ 0.3015047
 1)  (pvalue) ...... 0</code></pre>
 </div>
 <div class="cell-output-display">
@@ -583,9 +594,9 @@ c = \sup_{s\in(0,1)} \frac{\widehat{f}(s)}{g(s)} \leq \infty.
 </div>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code>2) Size ...... 18636
-2)   ks ............ 0.004883
-2)   (pvalue) ...... 0.7658753</code></pre>
+<pre><code>2) Size ...... 18576
+2)   ks ............ 0.003586941
+2)   (pvalue) ...... 0.9706162</code></pre>
 </div>
 <div class="cell-output-display">
 <div>
@@ -595,9 +606,9 @@ c = \sup_{s\in(0,1)} \frac{\widehat{f}(s)}{g(s)} \leq \infty.
 </div>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code>3) Size ...... 17806
-3)   ks ............ 0.002569351
-3)   (pvalue) ...... 0.9997977</code></pre>
+<pre><code>3) Size ...... 18026
+3)   ks ............ 0.002096407
+3)   (pvalue) ...... 0.9999985</code></pre>
 </div>
 <div class="cell-output-display">
 <div>
@@ -607,9 +618,9 @@ c = \sup_{s\in(0,1)} \frac{\widehat{f}(s)}{g(s)} \leq \infty.
 </div>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code>4) Size ...... 17523
-4)   ks ............ 0.002801151
-4)   (pvalue) ...... 0.9991427</code></pre>
+<pre><code>4) Size ...... 17764
+4)   ks ............ 0.002133088
+4)   (pvalue) ...... 0.9999979</code></pre>
 </div>
 <div class="cell-output-display">
 <div>
@@ -619,9 +630,9 @@ c = \sup_{s\in(0,1)} \frac{\widehat{f}(s)}{g(s)} \leq \infty.
 </div>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code>5) Size ...... 17345
-5)   ks ............ 0.002138985
-5)   (pvalue) ...... 0.9999984</code></pre>
+<pre><code>5) Size ...... 17418
+5)   ks ............ 0.001869536
+5)   (pvalue) ...... 1</code></pre>
 </div>
 <div class="cell-output-display">
 <div>
@@ -670,7 +681,7 @@ c = \sup_{s\in(0,1)} \frac{\widehat{f}(s)}{g(s)} \leq \infty.
 one-sample Kolmogorov-Smirnov test</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code>1)  ks ............ 0.5045229
+<pre><code>1)  ks ............ 0.5013107
 1)  (pvalue) ...... 0</code></pre>
 </div>
 <div class="cell-output-display">
@@ -681,9 +692,9 @@ one-sample Kolmogorov-Smirnov test</code></pre>
 </div>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code>2) Size ...... 6807
-2)   ks ............ 0.0558179
-2)   (pvalue) ...... 7.583483e-19</code></pre>
+<pre><code>2) Size ...... 7255
+2)   ks ............ 0.05586162
+2)   (pvalue) ...... 4.332301e-20</code></pre>
 </div>
 <div class="cell-output-display">
 <div>
@@ -706,7 +717,7 @@ one-sample Kolmogorov-Smirnov test</code></pre>
 <span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Warning in bs(x, degree = 3L, knots = numeric(0), Boundary.knots =
-c(3.63914428464661e-07, : some 'x' values beyond boundary knots may cause
+c(8.95933119475526e-07, : some 'x' values beyond boundary knots may cause
 ill-conditioned bases</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu">lines</span>(</span>
@@ -716,7 +727,7 @@ ill-conditioned bases</code></pre>
 <span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Warning in bs(x, degree = 3L, knots = numeric(0), Boundary.knots =
-c(0.00353202315537561, : some 'x' values beyond boundary knots may cause
+c(0.00176798690096119, : some 'x' values beyond boundary knots may cause
 ill-conditioned bases</code></pre>
 </div>
 <div class="cell-output-display">

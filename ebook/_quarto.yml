@@ -4,27 +4,27 @@ project:
 
 book:
   title: "Probabilistic Scores of Classifiers: Calibration is not Enough"
-  # author:
-  # - name: Arthur Charpentier
-  #   orcid: 0000-0003-3654-6286
-  #   affiliations:
-  #     - name: Université du Québec à Montréal
-  # - name: Agathe Fernandes Machado
-  #   orcid: 0009-0002-9743-9708
-  #   affiliations:
-  #     - name: Université du Québec à Montréal
-  # - name: Emmanuel Flachaire
-  #   orcid: 0000-0001-6241-5875
-  #   affiliations:
-  #     - name: Aix-Marseille School of Economics, Aix-Marseille Univ.
-  # - name: Ewen Gallic
-  #   orcid: 0000-0003-3740-2620
-  #   affiliations:
-  #     - name: Aix-Marseille School of Economics, Aix-Marseille Univ.
-  # - name: François Hu
-  #   orcid: 0009-0000-6093-6175
-  #   affiliations:
-  #     - name: Milliman France
+  author:
+  - name: Arthur Charpentier
+    orcid: 0000-0003-3654-6286
+    affiliations:
+      - name: Université du Québec à Montréal
+  - name: Agathe Fernandes Machado
+    orcid: 0009-0002-9743-9708
+    affiliations:
+      - name: Université du Québec à Montréal
+  - name: Emmanuel Flachaire
+    orcid: 0000-0001-6241-5875
+    affiliations:
+      - name: Aix-Marseille School of Economics, Aix-Marseille Univ.
+  - name: Ewen Gallic
+    orcid: 0000-0003-3740-2620
+    affiliations:
+      - name: Aix-Marseille School of Economics, Aix-Marseille Univ.
+  - name: François Hu
+    orcid: 0009-0000-6093-6175
+    affiliations:
+      - name: Milliman France
   date: "08/15/2024"
   chapters:
     - index.qmd
@@ -52,6 +52,11 @@ book:
         - book_real_estimations.qmd
         - book_real_results.qmd
     - references.qmd
+  navbar:
+    right:
+      - icon: github
+        href: https://github.com/fer-agathe/scores-classif-calibration
+        aria-label: GitHub
 
 bibliography: ./biblio.bib
 
