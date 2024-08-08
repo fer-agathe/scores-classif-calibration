@@ -9,7 +9,7 @@ All the R codes can be downloaded here: <https://github.com/fer-agathe/scores-cl
 
 A companion html e-book that explains the codes and provides supplementary materials can be accessed at the following url: <https://fer-agathe.github.io/scores-classif-calibration>.
 
-## Reference of the paper
+## Reference of the paper (preprint)
 
 ```
 @misc{fernandesmachado_2024_probabilistic,
